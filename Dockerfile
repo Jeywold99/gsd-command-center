@@ -24,8 +24,13 @@ COPY . .
 ARG NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 
-# Generate the Prisma client (it's gitignored, so it must be built here) + build.
-RUN npx prisma generate && npm run build
+# Generate the Prisma client (gitignored → must be built here) + build.
+# prisma.config.ts resolves DATABASE_URL via env(); `prisma generate` reads the
+# config but never connects, so a throwaway URL satisfies it. Scoped to this RUN
+# only (not baked into the image) — the real DATABASE_URL is injected at runtime.
+RUN export DATABASE_URL="postgresql://build:build@localhost:5432/build" \
+  && npx prisma generate \
+  && npm run build
 
 ENV NODE_ENV=production
 EXPOSE 3000 3001
