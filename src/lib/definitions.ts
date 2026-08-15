@@ -25,3 +25,6 @@ export type LoginState =
 // CRM create/edit form state (kept out of the "use server" actions file,
 // which may only export async functions).
 export type ClientFormState = { error?: string } | undefined;
+
+// Add-team-member form state.
+export type UserFormState = { error?: string; ok?: boolean } | undefined;
