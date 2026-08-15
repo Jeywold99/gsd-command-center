@@ -3,9 +3,13 @@ import { Plus, Building2 } from "lucide-react";
 import { listClients, listLeads } from "@/lib/crm";
 import { StatusBadge, StageLabel, PIPELINE_STAGES, fmtDate } from "./_components/badges";
 
-function rateOf(billingRates: { rate: unknown }[]): string {
-  const r = billingRates[0]?.rate;
-  return r ? `$${String(r)}/hr` : "—";
+function rateOf(
+  billingRates: { type?: string; rate: unknown; hoursPerWeek?: unknown }[],
+): string {
+  const b = billingRates[0];
+  if (!b) return "—";
+  if (b.type === "FIXED") return b.hoursPerWeek != null ? `${String(b.hoursPerWeek)} hrs/wk` : "Fixed";
+  return b.rate != null ? `$${String(b.rate)}/hr` : "—";
 }
 
 export default async function CrmPage({

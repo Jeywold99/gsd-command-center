@@ -19,6 +19,8 @@ export default async function EditClientPage({
   const client = await getClientById(id);
   if (!client) notFound();
 
+  const rate = client.billingRates[0];
+
   return (
     <div className="space-y-6">
       <Link
@@ -48,6 +50,9 @@ export default async function EditClientPage({
           colorHex: client.colorHex ?? "#FF5C00",
           startDate: toDateInput(client.startDate),
           renewalDate: toDateInput(client.renewalDate),
+          billingType: rate?.type ?? "HOURLY",
+          billingRate: rate?.rate != null ? String(rate.rate) : "",
+          hoursPerWeek: rate?.hoursPerWeek != null ? String(rate.hoursPerWeek) : "",
         }}
       />
     </div>

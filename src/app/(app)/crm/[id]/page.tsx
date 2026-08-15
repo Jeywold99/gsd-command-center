@@ -3,14 +3,21 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, ExternalLink, Plus } from "lucide-react";
 import { getClientById } from "@/lib/crm";
 import { StatusBadge, HealthDot, StageLabel, fmtDate } from "../_components/badges";
+import BillingRateForm from "../_components/rate-form";
 import {
   addNote,
   addContact,
-  setBillingRate,
   updateClientStatus,
   updateLeadStage,
   convertToClient,
 } from "../actions";
+
+// A billing entry → readable label ("$150/hr" or "10 hrs/wk").
+function fmtRate(r: { type: string; rate: unknown; hoursPerWeek: unknown }): string {
+  return r.type === "FIXED"
+    ? `${r.hoursPerWeek != null ? String(r.hoursPerWeek) : "—"} hrs/wk`
+    : `$${r.rate != null ? String(r.rate) : "—"}/hr`;
+}
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -251,28 +258,32 @@ export default async function ClientDetailPage({
 
           {/* Billing */}
           <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
-            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Billing Rate</h3>
-            <p className="text-3xl font-display text-ink tracking-wide">
-              {currentRate ? `$${String(currentRate.rate)}` : "—"}
-              {currentRate && <span className="text-base text-black/40"> /hr</span>}
-            </p>
-            {currentRate && (
-              <p className="text-xs text-black/40 mt-1">
-                Since {fmtDate(currentRate.effectiveFrom)}
-              </p>
+            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Billing</h3>
+            {currentRate ? (
+              <>
+                <p className="text-3xl font-display text-ink tracking-wide">
+                  {currentRate.type === "FIXED" ? (
+                    <>
+                      {currentRate.hoursPerWeek != null ? String(currentRate.hoursPerWeek) : "—"}
+                      <span className="text-base text-black/40"> hrs/wk</span>
+                    </>
+                  ) : (
+                    <>
+                      ${currentRate.rate != null ? String(currentRate.rate) : "—"}
+                      <span className="text-base text-black/40"> /hr</span>
+                    </>
+                  )}
+                </p>
+                <p className="text-xs text-black/40 mt-1">
+                  {currentRate.type === "FIXED" ? "Fixed retainer · " : ""}
+                  Since {fmtDate(currentRate.effectiveFrom)}
+                </p>
+              </>
+            ) : (
+              <p className="text-3xl font-display text-ink tracking-wide">—</p>
             )}
 
-            <details className="group mt-4">
-              <summary className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
-                <Plus className="w-3.5 h-3.5" /> Set new rate
-              </summary>
-              <form action={setBillingRate} className="mt-3 space-y-2">
-                <input type="hidden" name="clientId" value={client.id} />
-                <input name="rate" type="number" step="0.01" min="0" required placeholder="Hourly rate" className={input} />
-                <input name="note" placeholder="Note (optional)" className={input} />
-                <button type="submit" className={smallBtn}>Save Rate</button>
-              </form>
-            </details>
+            <BillingRateForm clientId={client.id} />
 
             {client.billingRates.length > 1 && (
               <div className="mt-4 pt-4 border-t border-black/[0.06]">
@@ -282,7 +293,7 @@ export default async function ClientDetailPage({
                 <ul className="space-y-1.5 text-xs text-black/50">
                   {client.billingRates.slice(1).map((r) => (
                     <li key={r.id} className="flex justify-between">
-                      <span>${String(r.rate)}/hr</span>
+                      <span>{fmtRate(r)}</span>
                       <span>{fmtDate(r.effectiveFrom)}</span>
                     </li>
                   ))}

@@ -41,21 +41,32 @@ export async function GET(req: NextRequest) {
   let rows: (string | number)[][];
 
   if (type === "invoice") {
-    const map = new Map<string, { client: string; rate: number; seconds: number }>();
+    const map = new Map<
+      string,
+      { client: string; rate: number; seconds: number; fixed: boolean }
+    >();
     for (const e of entries) {
       if (!e.billable) continue;
       const c = e.project?.client;
       if (!c) continue;
-      const rate = c.billingRates[0] ? Number(c.billingRates[0].rate) : 0;
-      const cur = map.get(c.id) ?? { client: c.companyName, rate, seconds: 0 };
+      const entry = c.billingRates[0];
+      const fixed = entry?.type === "FIXED";
+      const rate = !fixed && entry?.rate != null ? Number(entry.rate) : 0;
+      const cur = map.get(c.id) ?? { client: c.companyName, rate, seconds: 0, fixed };
       cur.seconds += e.durationSeconds ?? 0;
       cur.rate = rate;
+      cur.fixed = fixed;
       map.set(c.id, cur);
     }
     rows = [["Client", "Billable Hours", "Rate", "Amount"]];
     for (const v of map.values()) {
       const hrs = v.seconds / 3600;
-      rows.push([v.client, hrs.toFixed(2), v.rate.toFixed(2), (hrs * v.rate).toFixed(2)]);
+      // Fixed / retainer clients are billed a flat fee outside the app.
+      if (v.fixed) {
+        rows.push([v.client, hrs.toFixed(2), "—", "Flat fee (billed separately)"]);
+      } else {
+        rows.push([v.client, hrs.toFixed(2), v.rate.toFixed(2), (hrs * v.rate).toFixed(2)]);
+      }
     }
   } else {
     rows = [["Date", "Project", "Client", "Note", "Hours", "Billable"]];

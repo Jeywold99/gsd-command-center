@@ -47,6 +47,11 @@ enum ClientHealth {
   RED
 }
 
+enum BillingType {
+  HOURLY // per-hour rate
+  FIXED  // retainer: track required hours/week
+}
+
 enum ProjectStatus {
   PLANNING
   ACTIVE
@@ -215,18 +220,23 @@ model Client {
   @@index([pipelineStage])
 }
 
-// Dated per-client hourly rate. The current rate = latest effectiveFrom <= now.
-// Invoicing prices hours at the rate that was in effect on the work date.
+// Dated per-client billing arrangement (kept as history so rate changes are
+// tracked). HOURLY = `rate` per hour; FIXED = retainer tracking `hoursPerWeek`.
+// The current arrangement = latest effectiveFrom.
 model BillingRate {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
   clientId      String
-  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  rate          Decimal  @db.Decimal(12, 2)
-  effectiveFrom DateTime @default(now())
+  client        Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  type          BillingType @default(HOURLY)
+  // Per-hour rate (HOURLY). Null for FIXED clients.
+  rate          Decimal?    @db.Decimal(12, 2)
+  // Required hours per week (FIXED retainer). Null for HOURLY clients.
+  hoursPerWeek  Decimal?    @db.Decimal(6, 2)
+  effectiveFrom DateTime    @default(now())
   note          String?
   createdById   String
-  createdBy     User     @relation(fields: [createdById], references: [id])
-  createdAt     DateTime @default(now())
+  createdBy     User        @relation(fields: [createdById], references: [id])
+  createdAt     DateTime    @default(now())
 
   @@index([clientId, effectiveFrom])
 }

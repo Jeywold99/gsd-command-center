@@ -18,6 +18,9 @@ type Defaults = {
   colorHex?: string;
   startDate?: string;
   renewalDate?: string;
+  billingType?: string;
+  billingRate?: string;
+  hoursPerWeek?: string;
 };
 
 export default function ClientForm({
@@ -34,6 +37,9 @@ export default function ClientForm({
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [kind, setKind] = useState<"CLIENT" | "LEAD">("CLIENT");
+  const [billingType, setBillingType] = useState<"HOURLY" | "FIXED">(
+    defaults.billingType === "FIXED" ? "FIXED" : "HOURLY",
+  );
 
   return (
     <form action={formAction} className="space-y-5 max-w-2xl">
@@ -150,19 +156,60 @@ export default function ClientForm({
           <input type="date" name="renewalDate" defaultValue={defaults.renewalDate} className={input} />
         </div>
 
-        {mode === "create" && (
-          <div>
-            <label className={label}>Billing Rate (per hour)</label>
-            <input
-              name="billingRate"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              className={input}
-            />
+        <div className="sm:col-span-2 border-t border-black/[0.07] pt-4">
+          <span className={label}>Billing</span>
+          <div className="inline-flex rounded-full bg-cream border border-black/10 p-1 mb-3">
+            {(["HOURLY", "FIXED"] as const).map((t) => (
+              <label key={t} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="billingTypeChoice"
+                  value={t}
+                  checked={billingType === t}
+                  onChange={() => setBillingType(t)}
+                  className="sr-only"
+                />
+                <span
+                  className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold transition ${
+                    billingType === t ? "bg-brand text-white" : "text-ink/60"
+                  }`}
+                >
+                  {t === "HOURLY" ? "Hourly" : "Fixed"}
+                </span>
+              </label>
+            ))}
           </div>
-        )}
+          {/* Server reads the type from here; the radios above are just UI. */}
+          <input type="hidden" name="billingType" value={billingType} />
+
+          {billingType === "HOURLY" ? (
+            <div>
+              <label className={label}>Rate (per hour)</label>
+              <input
+                name="billingRate"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={defaults.billingRate}
+                placeholder="0.00"
+                className={input}
+              />
+            </div>
+          ) : (
+            <div>
+              <label className={label}>Required hours / week</label>
+              <input
+                name="hoursPerWeek"
+                type="number"
+                step="0.5"
+                min="0"
+                defaultValue={defaults.hoursPerWeek}
+                placeholder="e.g. 10"
+                className={input}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {mode === "create" && (

@@ -7,6 +7,30 @@ import { verifySession, requireRole } from "@/lib/dal";
 import { str, date } from "@/lib/forms";
 import type { ClientFormState } from "@/lib/definitions";
 
+// Billing arrangement from a form: HOURLY → rate/hr, FIXED → required hrs/week.
+type BillingInput = {
+  type: "HOURLY" | "FIXED";
+  rate: string | null;
+  hoursPerWeek: string | null;
+};
+function parseBilling(formData: FormData): BillingInput | null {
+  const type = formData.get("billingType") === "FIXED" ? "FIXED" : "HOURLY";
+  if (type === "FIXED") {
+    const h = str(formData.get("hoursPerWeek"));
+    if (!h || isNaN(Number(h))) return null;
+    return { type, rate: null, hoursPerWeek: h };
+  }
+  const r = str(formData.get("billingRate"));
+  if (!r || isNaN(Number(r))) return null;
+  return { type, rate: r, hoursPerWeek: null };
+}
+// Compare a stored value (Decimal|null) with a form value (string|null) numerically.
+function sameNum(a: unknown, b: string | null): boolean {
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+  return Number(a) === Number(b);
+}
+
 // ── create ──
 export async function createClient(
   _state: ClientFormState,
@@ -22,7 +46,7 @@ export async function createClient(
   const pipelineStage =
     kind === "LEAD" ? (str(formData.get("pipelineStage")) ?? "NEW") : null;
 
-  const rateRaw = str(formData.get("billingRate"));
+  const billing = parseBilling(formData);
   const contactName = str(formData.get("contactName"));
 
   let clientId = "";
@@ -42,10 +66,16 @@ export async function createClient(
     });
     clientId = client.id;
 
-    if (rateRaw && !isNaN(Number(rateRaw))) {
+    if (billing) {
       const session = await verifySession();
       await tx.billingRate.create({
-        data: { clientId, rate: rateRaw, createdById: session.userId },
+        data: {
+          clientId,
+          type: billing.type,
+          rate: billing.rate,
+          hoursPerWeek: billing.hoursPerWeek,
+          createdById: session.userId,
+        },
       });
     }
 
@@ -89,6 +119,33 @@ export async function updateClient(
       renewalDate: date(formData.get("renewalDate")),
     },
   });
+
+  // Billing: if it differs from the current arrangement, add a NEW dated entry
+  // (a rate change / increase) rather than overwriting — keeps the history.
+  const billing = parseBilling(formData);
+  if (billing) {
+    const latest = await prisma.billingRate.findFirst({
+      where: { clientId: id },
+      orderBy: { effectiveFrom: "desc" },
+    });
+    const changed =
+      !latest ||
+      latest.type !== billing.type ||
+      !sameNum(latest.rate, billing.rate) ||
+      !sameNum(latest.hoursPerWeek, billing.hoursPerWeek);
+    if (changed) {
+      const session = await verifySession();
+      await prisma.billingRate.create({
+        data: {
+          clientId: id,
+          type: billing.type,
+          rate: billing.rate,
+          hoursPerWeek: billing.hoursPerWeek,
+          createdById: session.userId,
+        },
+      });
+    }
+  }
 
   revalidatePath(`/crm/${id}`);
   revalidatePath("/crm");
@@ -173,12 +230,14 @@ export async function addNote(formData: FormData) {
 export async function setBillingRate(formData: FormData) {
   const session = await requireRole("OWNER", "MANAGER");
   const clientId = str(formData.get("clientId"));
-  const rate = str(formData.get("rate"));
-  if (!clientId || !rate || isNaN(Number(rate))) return;
+  const billing = parseBilling(formData);
+  if (!clientId || !billing) return;
   await prisma.billingRate.create({
     data: {
       clientId,
-      rate,
+      type: billing.type,
+      rate: billing.rate,
+      hoursPerWeek: billing.hoursPerWeek,
       note: str(formData.get("note")),
       createdById: session.userId,
     },
