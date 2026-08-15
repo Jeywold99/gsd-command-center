@@ -48,6 +48,7 @@ export async function getTask(id: string) {
         orderBy: { remindAt: "asc" },
         include: { user: { select: { id: true, name: true } } },
       },
+      documents: { orderBy: { createdAt: "desc" } },
     },
   });
 }

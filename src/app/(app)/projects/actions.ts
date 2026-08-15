@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySession, requireRole } from "@/lib/dal";
 import { notifyMany } from "@/lib/notifications";
+import { saveFile, removeFile } from "@/lib/storage";
 import { str, date } from "@/lib/forms";
 import type { ClientFormState } from "@/lib/definitions";
 
@@ -292,10 +293,63 @@ export async function quickAddTask(formData: FormData) {
     },
   });
 
-  if (formData.get("assignToMe") === "on") {
-    await prisma.taskAssignee.create({ data: { taskId: task.id, userId: session.userId } });
+  // Assign the people picked at creation (deduped; empty is fine).
+  const assigneeIds = [
+    ...new Set(formData.getAll("assigneeIds").map(String).filter(Boolean)),
+  ];
+  if (assigneeIds.length) {
+    await prisma.taskAssignee.createMany({
+      data: assigneeIds.map((userId) => ({ taskId: task.id, userId })),
+    });
+    await notifyMany(
+      assigneeIds.filter((uid) => uid !== session.userId),
+      {
+        type: "TASK_ASSIGNED",
+        title: "You were assigned a task",
+        body: task.title,
+        entityType: "task",
+        entityId: task.id,
+        linkUrl: `/projects/${projectId}/tasks/${task.id}`,
+      },
+    );
   }
 
   revalidatePath("/tasks");
   revalidatePath(`/projects/${projectId}`);
+}
+
+// ── Task attachments (images/files, previewed on the task) ──
+export async function uploadTaskAttachment(formData: FormData) {
+  const session = await verifySession();
+  const taskId = str(formData.get("taskId"));
+  const projectId = str(formData.get("projectId"));
+  const file = formData.get("file");
+  if (!taskId || !(file instanceof File) || file.size === 0) return;
+
+  const { storagePath, sizeBytes } = await saveFile(file);
+  await prisma.document.create({
+    data: {
+      name: file.name,
+      storagePath,
+      mimeType: file.type || "application/octet-stream",
+      sizeBytes,
+      taskId,
+      uploadedById: session.userId,
+    },
+  });
+  if (projectId) revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
+}
+
+export async function deleteTaskAttachment(formData: FormData) {
+  await verifySession();
+  const id = str(formData.get("id"));
+  const taskId = str(formData.get("taskId"));
+  const projectId = str(formData.get("projectId"));
+  if (!id) return;
+  const doc = await prisma.document.findUnique({ where: { id } });
+  if (doc) {
+    await removeFile(doc.storagePath);
+    await prisma.document.delete({ where: { id } });
+  }
+  if (projectId && taskId) revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
 }

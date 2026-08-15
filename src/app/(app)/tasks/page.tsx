@@ -3,6 +3,7 @@ import { ListChecks, Plus } from "lucide-react";
 import { verifySession } from "@/lib/dal";
 import { listMyTasks, listAllTasks } from "@/lib/tasks";
 import { listProjectOptions } from "@/lib/time";
+import { listUsers } from "@/lib/projects";
 import { quickAddTask } from "../projects/actions";
 import { COLUMNS, PriorityTag, initials, fmtDate } from "../projects/_components/task-badges";
 
@@ -20,9 +21,10 @@ export default async function TasksPage({
   const session = await verifySession();
   const { filter } = await searchParams;
   const showAll = filter === "all";
-  const [tasks, projects] = await Promise.all([
+  const [tasks, projects, users] = await Promise.all([
     showAll ? listAllTasks() : listMyTasks(session.userId),
     listProjectOptions(),
+    listUsers(),
   ]);
 
   const byStatus = COLUMNS.map((c) => ({
@@ -92,10 +94,15 @@ export default async function TasksPage({
                 <input type="date" name="dueDate" className={input} />
               </div>
             </div>
-            <label className="flex items-center gap-2 text-xs text-ink/60">
-              <input type="checkbox" name="assignToMe" defaultChecked className="accent-brand w-4 h-4" />
-              Assign to me
-            </label>
+            <div>
+              <label className={label}>Assign to</label>
+              <select name="assigneeIds" multiple defaultValue={[session.userId]} className={`${input} h-24`}>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-black/40 mt-1">Hold Ctrl/Cmd to pick more than one.</p>
+            </div>
             <button
               type="submit"
               disabled={projects.length === 0}
