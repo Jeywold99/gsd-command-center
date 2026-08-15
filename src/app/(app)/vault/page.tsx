@@ -1,14 +1,8 @@
 import Link from "next/link";
-import { FileText, Download, Trash2, Upload } from "lucide-react";
+import { FileText, Upload } from "lucide-react";
 import { listDocuments, listCategories } from "@/lib/vault";
-import { fmtDate } from "@/lib/format";
-import { uploadDocument, deleteDocument } from "./actions";
-
-function fmtBytes(n: number) {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { uploadDocument } from "./actions";
+import DocGrid from "./_components/doc-grid";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -73,7 +67,7 @@ export default async function VaultPage({
         </div>
       )}
 
-      {/* List */}
+      {/* Card grid + inline preview */}
       {docs.length === 0 ? (
         <div className="bg-white border border-dashed border-black/15 rounded-2xl p-14 text-center">
           <div className="w-12 h-12 rounded-xl bg-brand-pale text-brand flex items-center justify-center mx-auto mb-4">
@@ -82,71 +76,7 @@ export default async function VaultPage({
           <p className="text-black/50">No documents yet. Upload SOPs, contracts, or assets above.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-ink/45 border-b border-black/[0.07]">
-                  <th className="px-5 py-3">Name</th>
-                  <th className="px-5 py-3">Category</th>
-                  <th className="px-5 py-3">Linked</th>
-                  <th className="px-5 py-3">Size</th>
-                  <th className="px-5 py-3">Uploaded</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {docs.map((doc) => (
-                  <tr key={doc.id} className="border-b border-black/[0.05] last:border-0 hover:bg-cream/60 transition">
-                    <td className="px-5 py-3">
-                      <span className="inline-flex items-center gap-2 font-semibold text-ink">
-                        <FileText className="w-4 h-4 text-black/30 shrink-0" />
-                        {doc.name}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      {doc.category ? (
-                        <span className="text-[11px] font-bold uppercase tracking-wide text-brand bg-brand-pale px-2 py-0.5 rounded-full">
-                          {doc.category}
-                        </span>
-                      ) : (
-                        <span className="text-black/30">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-black/55">
-                      {doc.project?.name ?? doc.client?.companyName ?? "—"}
-                    </td>
-                    <td className="px-5 py-3 text-black/55">{fmtBytes(doc.sizeBytes)}</td>
-                    <td className="px-5 py-3 text-black/55">
-                      {doc.uploadedBy.name} · {fmtDate(doc.createdAt)}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <a
-                          href={`/api/files/${doc.id}`}
-                          className="p-1.5 rounded-lg text-ink/50 hover:text-brand hover:bg-brand-pale/50 transition"
-                          title="Download"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                        <form action={deleteDocument}>
-                          <input type="hidden" name="id" value={doc.id} />
-                          <button
-                            type="submit"
-                            className="p-1.5 rounded-lg text-ink/40 hover:text-red-600 hover:bg-red-50 transition"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DocGrid docs={docs} />
       )}
     </div>
   );

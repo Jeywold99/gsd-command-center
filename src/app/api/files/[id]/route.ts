@@ -5,7 +5,7 @@ import { readFile } from "@/lib/storage";
 
 // Auth-gated file download. Files live outside /public so they are never
 // served statically — only through this handler after a session check.
-export async function GET(_req: NextRequest, ctx: RouteContext<"/api/files/[id]">) {
+export async function GET(req: NextRequest, ctx: RouteContext<"/api/files/[id]">) {
   const session = await getSessionFromCookie();
   if (!session?.userId) {
     return new NextResponse("Unauthorized", { status: 401 });
@@ -15,12 +15,15 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/files/[id]"
   const doc = await prisma.document.findUnique({ where: { id } });
   if (!doc) return new NextResponse("Not found", { status: 404 });
 
+  // ?inline=1 renders in-browser (image/pdf/text preview); default forces download.
+  const inline = req.nextUrl.searchParams.get("inline") === "1";
+
   try {
     const buf = await readFile(doc.storagePath);
     return new NextResponse(new Uint8Array(buf), {
       headers: {
         "Content-Type": doc.mimeType,
-        "Content-Disposition": `attachment; filename="${encodeURIComponent(doc.name)}"`,
+        "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(doc.name)}"`,
         "Content-Length": String(doc.sizeBytes),
       },
     });

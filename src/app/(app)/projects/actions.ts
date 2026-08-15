@@ -87,6 +87,20 @@ export async function createTask(projectId: string, status: string, title: strin
   return task;
 }
 
+// Status-only move (used by the global /tasks board, which spans projects so
+// per-project column re-indexing doesn't apply).
+export async function moveTaskStatus(taskId: string, status: string) {
+  await verifySession();
+  await prisma.task.update({
+    where: { id: taskId },
+    data: {
+      status: status as never,
+      completedAt: status === "DONE" ? new Date() : null,
+    },
+  });
+  revalidatePath("/tasks");
+}
+
 // Persist a drag: new status for the moved task + re-index the destination column.
 export async function moveTask(
   taskId: string,
