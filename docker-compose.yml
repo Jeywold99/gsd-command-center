@@ -1,0 +1,84 @@
+name: gsd-command-center
+
+services:
+  # ── PostgreSQL (self-contained, persistent volume) ──
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Next.js app (also applies DB migrations on start) ──
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+    image: gsd-command-center
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+      GSD_ALLOWED_ORIGIN: ${GSD_ALLOWED_ORIGIN}
+      GSD_INBOX_ADDRESS: ${GSD_INBOX_ADDRESS}
+      STORAGE_DIR: /app/storage/uploads
+    volumes:
+      - uploads:/app/storage/uploads
+    command: sh -c "npx prisma migrate deploy && npm run start"
+
+  # ── Socket.IO server (real-time chat) — reuses the web image ──
+  socket:
+    image: gsd-command-center
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN}
+      SOCKET_PORT: "3001"
+    command: npm run socket
+
+  # ── Reminders worker (fires due task reminders → notifications) ──
+  reminders:
+    image: gsd-command-center
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+    command: npm run reminders
+
+  # ── Cloudflare Tunnel (public HTTPS, no open ports) ──
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    depends_on:
+      - web
+      - socket
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+
+volumes:
+  db-data:
+  uploads:

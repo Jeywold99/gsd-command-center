@@ -1,0 +1,285 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  closestCorners,
+  type DragStartEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { CalendarClock, GitBranch } from "lucide-react";
+import { COLUMNS, PRIORITY, initials, fmtDate } from "./task-badges";
+import { createTask, moveTask } from "../actions";
+
+type Assignee = { user: { id: string; name: string } };
+export type BoardTask = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate: Date | string | null;
+  assignees: Assignee[];
+  _count: { subtasks: number };
+};
+
+type Cols = Record<string, BoardTask[]>;
+
+function group(tasks: BoardTask[]): Cols {
+  const cols: Cols = {};
+  for (const c of COLUMNS) cols[c.status] = [];
+  for (const t of tasks) (cols[t.status] ??= []).push(t);
+  return cols;
+}
+
+function containerOf(cols: Cols, id: string): string | null {
+  if (id in cols) return id;
+  return Object.keys(cols).find((k) => cols[k].some((t) => t.id === id)) ?? null;
+}
+
+function CardBody({ task }: { task: BoardTask }) {
+  const p = PRIORITY[task.priority] ?? PRIORITY.MEDIUM;
+  return (
+    <>
+      <p className="text-sm font-semibold text-ink leading-snug">{task.title}</p>
+      <div className="mt-2 flex items-center justify-between">
+        <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${p.cls}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${p.dot}`} />
+          {p.label}
+        </span>
+        {task.assignees.length > 0 && (
+          <div className="flex -space-x-1.5">
+            {task.assignees.slice(0, 3).map((a) => (
+              <span
+                key={a.user.id}
+                title={a.user.name}
+                className="w-5 h-5 rounded-full bg-midnight text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white"
+              >
+                {initials(a.user.name)}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      {(task.dueDate || task._count.subtasks > 0) && (
+        <div className="mt-2 flex items-center gap-3 text-[11px] text-black/40">
+          {task.dueDate && (
+            <span className="inline-flex items-center gap-1">
+              <CalendarClock className="w-3 h-3" />
+              {fmtDate(task.dueDate)}
+            </span>
+          )}
+          {task._count.subtasks > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <GitBranch className="w-3 h-3" />
+              {task._count.subtasks}
+            </span>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function TaskCard({ task, projectId }: { task: BoardTask; projectId: string }) {
+  const router = useRouter();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id });
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => router.push(`/projects/${projectId}/tasks/${task.id}`)}
+      className="bg-white rounded-xl border border-black/10 p-3 shadow-sm cursor-grab active:cursor-grabbing hover:border-brand/40 transition-colors"
+    >
+      <CardBody task={task} />
+    </div>
+  );
+}
+
+function AddCard({ status, onAdd }: { status: string; onAdd: (s: string, t: string) => void }) {
+  const [val, setVal] = useState("");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const t = val.trim();
+        if (!t) return;
+        setVal("");
+        onAdd(status, t);
+      }}
+      className="mt-2"
+    >
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        placeholder="+ Add task"
+        className="w-full bg-transparent text-sm px-2 py-1.5 rounded-lg border border-transparent hover:border-black/10 focus:border-brand focus:bg-white focus:outline-none placeholder:text-black/35 transition"
+      />
+    </form>
+  );
+}
+
+function Column({
+  status,
+  label,
+  tasks,
+  projectId,
+  onAdd,
+}: {
+  status: string;
+  label: string;
+  tasks: BoardTask[];
+  projectId: string;
+  onAdd: (s: string, t: string) => void;
+}) {
+  const { setNodeRef } = useDroppable({ id: status });
+  return (
+    <div className="bg-cream rounded-2xl border border-black/[0.06] p-3 flex flex-col">
+      <div className="flex items-center justify-between px-1 mb-3">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">{label}</span>
+        <span className="text-[11px] font-bold text-ink/35">{tasks.length}</span>
+      </div>
+      <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+        <div ref={setNodeRef} className="space-y-2 min-h-[24px]">
+          {tasks.map((t) => (
+            <TaskCard key={t.id} task={t} projectId={projectId} />
+          ))}
+        </div>
+      </SortableContext>
+      <AddCard status={status} onAdd={onAdd} />
+    </div>
+  );
+}
+
+export default function KanbanBoard({
+  projectId,
+  initialTasks,
+}: {
+  projectId: string;
+  initialTasks: BoardTask[];
+}) {
+  const [cols, setCols] = useState<Cols>(() => group(initialTasks));
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const colsRef = useRef(cols);
+  useEffect(() => {
+    colsRef.current = cols;
+  }, [cols]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  const activeTask = activeId
+    ? Object.values(cols).flat().find((t) => t.id === activeId) ?? null
+    : null;
+
+  function onDragStart(e: DragStartEvent) {
+    setActiveId(String(e.active.id));
+  }
+
+  function onDragOver(e: DragOverEvent) {
+    const { active, over } = e;
+    if (!over) return;
+    const activeC = containerOf(colsRef.current, String(active.id));
+    const overC = containerOf(colsRef.current, String(over.id));
+    if (!activeC || !overC || activeC === overC) return;
+
+    setCols((prev) => {
+      const activeItems = prev[activeC];
+      const overItems = prev[overC];
+      const idx = activeItems.findIndex((t) => t.id === active.id);
+      if (idx < 0) return prev;
+      const moved = { ...activeItems[idx], status: overC };
+      const overIdx = overItems.findIndex((t) => t.id === over.id);
+      const insertAt = overIdx >= 0 ? overIdx : overItems.length;
+      return {
+        ...prev,
+        [activeC]: activeItems.filter((t) => t.id !== active.id),
+        [overC]: [...overItems.slice(0, insertAt), moved, ...overItems.slice(insertAt)],
+      };
+    });
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    setActiveId(null);
+    if (!over) return;
+
+    const current = colsRef.current;
+    const overC = containerOf(current, String(over.id)) ?? containerOf(current, String(active.id));
+    if (!overC) return;
+
+    let next = current;
+    const items = current[overC];
+    const oldIndex = items.findIndex((t) => t.id === active.id);
+    const newIndex = items.findIndex((t) => t.id === over.id);
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+      next = { ...current, [overC]: arrayMove(items, oldIndex, newIndex) };
+      setCols(next);
+    }
+
+    const orderedIds = next[overC].map((t) => t.id);
+    void moveTask(String(active.id), overC, orderedIds);
+  }
+
+  async function handleAdd(status: string, title: string) {
+    const created = await createTask(projectId, status, title);
+    if (created) {
+      setCols((prev) => ({
+        ...prev,
+        [status]: [...prev[status], created as unknown as BoardTask],
+      }));
+    }
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {COLUMNS.map((c) => (
+          <Column
+            key={c.status}
+            status={c.status}
+            label={c.label}
+            tasks={cols[c.status] ?? []}
+            projectId={projectId}
+            onAdd={handleAdd}
+          />
+        ))}
+      </div>
+      <DragOverlay>
+        {activeTask ? (
+          <div className="bg-white rounded-xl border border-brand/50 p-3 shadow-lg rotate-2">
+            <CardBody task={activeTask} />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}

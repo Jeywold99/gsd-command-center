@@ -1,0 +1,28 @@
+# Keep the build context small and secrets out of the image.
+node_modules
+.next
+.git
+.gitignore
+
+# Secrets — injected at runtime via compose, never baked into the image.
+.env
+.env.*
+
+# Regenerated inside the image by `prisma generate`.
+src/generated/prisma
+
+# Local-only dirs / build artifacts.
+storage
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store
+
+# Editor / agent scaffolding.
+.claude
+.agents
+.windsurf
+
+# Docs & integration files not needed at runtime.
+n8n
+DEPLOY.md
+README.md

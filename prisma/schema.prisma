@@ -1,0 +1,613 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  GSD HQ — Command Center · Data Model
+//  Self-hosted (VPS → Raspberry Pi). PostgreSQL + Prisma 7 (pg adapter).
+//  Covers: Auth/roles · CRM (clients + leads) · Projects/Milestones ·
+//          Tasks (subtasks, multi-assignee) · Channels/Chat · Calendar ·
+//          Document Vault + Project Folders · Time tracking/Timesheets ·
+//          Reminders/Notifications · n8n automation.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum ClientStatus {
+  LEAD
+  ACTIVE
+  PAUSED
+  CHURNED
+}
+
+// Sales pipeline for LEAD-status clients (leads convert to ACTIVE clients).
+enum PipelineStage {
+  NEW
+  CONTACTED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum ClientHealth {
+  GREEN
+  YELLOW
+  RED
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ChannelScope {
+  GENERAL
+  CLIENT
+  PROJECT
+}
+
+enum EventType {
+  MEETING
+  CONTENT_PUBLISH
+  OTHER
+}
+
+enum AttendeeStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+}
+
+enum TimeEntrySource {
+  TIMER
+  MANUAL
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_REMINDER
+  TASK_DUE_SOON
+  MENTION
+  CHANNEL_MESSAGE
+  SYSTEM
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum EmailStatus {
+  RECEIVED // inbound message sitting in the shared inbox
+  DRAFT // outbound reply being composed (any team member)
+  QUEUED // outbound reply approved for send; n8n polls & delivers
+  SENT // n8n confirmed delivery
+  FAILED // n8n reported a send failure
+}
+
+// ── Auth & People ────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(STAFF)
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  // Optional per-person cost rate, used only for the payroll export.
+  // (Client invoicing uses Client.billingRate — see spec.)
+  payRate      Decimal?  @db.Decimal(12, 2)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations (back-references)
+  tasksCreated      Task[]             @relation("TaskCreatedBy")
+  taskAssignments   TaskAssignee[]
+  messages          Message[]
+  clientNotes       ClientNote[]
+  timeEntries       TimeEntry[]
+  notifications     Notification[]
+  remindersCreated  Reminder[]         @relation("ReminderCreatedBy")
+  remindersTargeted Reminder[]         @relation("ReminderTarget")
+  eventsCreated     CalendarEvent[]    @relation("EventCreatedBy")
+  eventAttendance   CalendarAttendee[]
+  documentsUploaded Document[]
+  channelsCreated   Channel[]          @relation("ChannelCreatedBy")
+  invitesSent       Invite[]           @relation("InviteInvitedBy")
+  apiKeys           ApiKey[]
+  webhooks          OutgoingWebhook[]
+  emailsAuthored    EmailMessage[]     @relation("EmailAuthor")
+  billingRatesSet   BillingRate[]
+
+  @@index([role])
+}
+
+model Invite {
+  id          String       @id @default(uuid())
+  email       String
+  role        Role         @default(STAFF)
+  token       String       @unique
+  status      InviteStatus @default(PENDING)
+  invitedById String
+  invitedBy   User         @relation("InviteInvitedBy", fields: [invitedById], references: [id])
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([email])
+  @@index([status])
+}
+
+// ── CRM ──────────────────────────────────────────────────────────────────────
+
+model Client {
+  id            String         @id @default(uuid())
+  companyName   String
+  status        ClientStatus   @default(LEAD)
+  // Set while status = LEAD; drives the sales pipeline board.
+  pipelineStage PipelineStage?
+  health        ClientHealth?
+  serviceType   String? // e.g. 'Fractional COO', 'Marketing', 'Dev'
+  // Client billing currency; the hourly rate itself lives in BillingRate (dated history).
+  currency      String         @default("USD")
+  // Hex color used to color-code this client across the shared calendar.
+  colorHex      String?
+  website       String?
+  startDate     DateTime?
+  renewalDate   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  contacts       Contact[]
+  projects       Project[]
+  notes          ClientNote[]
+  channels       Channel[]
+  calendarEvents CalendarEvent[]
+  documents      Document[]
+  billingRates   BillingRate[]
+  emailThreads   EmailThread[]
+
+  @@index([status])
+  @@index([pipelineStage])
+}
+
+// Dated per-client hourly rate. The current rate = latest effectiveFrom <= now.
+// Invoicing prices hours at the rate that was in effect on the work date.
+model BillingRate {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  rate          Decimal  @db.Decimal(12, 2)
+  effectiveFrom DateTime @default(now())
+  note          String?
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([clientId, effectiveFrom])
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  title     String?
+  email     String?
+  phone     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+// Activity / notes log on a client (calls, updates, context).
+model ClientNote {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
+}
+
+// ── Projects & Tasks ─────────────────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  // Null clientId = internal project.
+  clientId    String?
+  client      Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  status      ProjectStatus @default(PLANNING)
+  budget      Decimal?      @db.Decimal(14, 2)
+  startDate   DateTime?
+  dueDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  milestones     Milestone[]
+  tasks          Task[]
+  channels       Channel[]
+  documents      Document[]
+  calendarEvents CalendarEvent[]
+  timeEntries    TimeEntry[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+// A phase / milestone within a project (drives the Timeline view).
+model Milestone {
+  id          String          @id @default(uuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  status      MilestoneStatus @default(PENDING)
+  startDate   DateTime?
+  dueDate     DateTime?
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tasks Task[]
+
+  @@index([projectId])
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  // Null projectId = "inbox" (e.g. a task piped in from n8n before triage).
+  projectId   String?
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  milestoneId String?
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  // Self-relation for subtasks.
+  parentId    String?
+  parent      Task?      @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks    Task[]     @relation("Subtasks")
+  startDate   DateTime?
+  dueDate     DateTime?
+  // Ordering within a Kanban column.
+  position    Int        @default(0)
+  completedAt DateTime?
+  createdById String?
+  createdBy   User?      @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  assignees      TaskAssignee[]
+  reminders      Reminder[]
+  timeEntries    TimeEntry[]
+  calendarEvents CalendarEvent[]
+
+  @@index([projectId])
+  @@index([milestoneId])
+  @@index([parentId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Join table: a task can have several assignees.
+model TaskAssignee {
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+// ── Chat (Discord-style channels, no DMs) ────────────────────────────────────
+
+model Channel {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  scope       ChannelScope @default(GENERAL)
+  // Set when scope = CLIENT / PROJECT.
+  clientId    String?
+  client      Client?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  isArchived  Boolean      @default(false)
+  createdById String
+  createdBy   User         @relation("ChannelCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  messages Message[]
+
+  @@index([scope])
+  @@index([clientId])
+  @@index([projectId])
+}
+
+model Message {
+  id        String    @id @default(uuid())
+  channelId String
+  channel   Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User      @relation(fields: [senderId], references: [id])
+  content   String
+  editedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  attachments Document[]
+
+  @@index([channelId, createdAt])
+}
+
+// ── Calendar (team-wide, color-coded per client) ─────────────────────────────
+// Task due dates are overlaid by querying Task.dueDate — not duplicated here.
+
+model CalendarEvent {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  type        EventType @default(MEETING)
+  startAt     DateTime
+  endAt       DateTime?
+  allDay      Boolean   @default(false)
+  location    String?
+  meetingUrl  String?
+  clientId    String?
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  taskId      String?
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdById String
+  createdBy   User      @relation("EventCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  attendees CalendarAttendee[]
+
+  @@index([startAt])
+  @@index([clientId])
+}
+
+model CalendarAttendee {
+  eventId String
+  event   CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status  AttendeeStatus @default(INVITED)
+
+  @@id([eventId, userId])
+  @@index([userId])
+}
+
+// ── Files: Document Vault + Project Folders + chat attachments ────────────────
+
+model Document {
+  id           String   @id @default(uuid())
+  name         String // original filename
+  storagePath  String // path on disk / bucket key (storage interface)
+  mimeType     String
+  sizeBytes    Int
+  // Free-form vault category, e.g. 'SOP', 'Contract', 'Asset'.
+  category     String?
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  // Any/all may be set: tied to a client, a project folder, or a chat message.
+  clientId     String?
+  client       Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messageId    String?
+  message      Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  isArchived   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([clientId])
+  @@index([projectId])
+  @@index([category])
+}
+
+// ── Time tracking & timesheets ───────────────────────────────────────────────
+
+model TimeEntry {
+  id              String          @id @default(uuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Timer/manual entry attaches to a task and/or project; client derived via project.
+  taskId          String?
+  task            Task?           @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  projectId       String?
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  startedAt       DateTime
+  // Null endedAt = timer currently running (one running entry per user, enforced in app).
+  endedAt         DateTime?
+  durationSeconds Int? // set on stop, or directly for manual entries
+  billable        Boolean         @default(true)
+  note            String?
+  source          TimeEntrySource @default(TIMER)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([userId, startedAt])
+  @@index([projectId])
+  @@index([taskId])
+}
+
+// ── Reminders & Notifications (in-app) ───────────────────────────────────────
+
+// Scheduled trigger; a node-cron worker fires these into Notifications.
+model Reminder {
+  id          String    @id @default(uuid())
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  // If null, remind all assignees; else this specific user.
+  userId      String?
+  user        User?     @relation("ReminderTarget", fields: [userId], references: [id], onDelete: Cascade)
+  remindAt    DateTime
+  note        String?
+  sent        Boolean   @default(false)
+  sentAt      DateTime?
+  createdById String
+  createdBy   User      @relation("ReminderCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([remindAt, sent])
+  @@index([taskId])
+}
+
+// In-app notification-center item.
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       NotificationType
+  title      String
+  body       String?
+  // Deep-link target, e.g. entityType='task', entityId=<uuid>.
+  entityType String?
+  entityId   String?
+  linkUrl    String?
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, isRead])
+}
+
+// ── n8n / Automation (wired in Phase 8) ──────────────────────────────────────
+
+// API key that n8n presents on inbound requests (e.g. create-task webhook).
+model ApiKey {
+  id          String    @id @default(uuid())
+  name        String
+  hashedKey   String    @unique
+  lastUsedAt  DateTime?
+  revoked     Boolean   @default(false)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+// Outgoing webhook: command center POSTs to n8n when `event` fires.
+model OutgoingWebhook {
+  id          String   @id @default(uuid())
+  name        String
+  event       String // e.g. 'task.created', 'client.won'
+  targetUrl   String
+  secret      String?
+  active      Boolean  @default(true)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([event, active])
+}
+
+// ── Shared Inbox (Jana's email → command center) ─────────────────────────────
+// An automation (n8n) pulls client / lead / update emails from Jana's inbox and
+// POSTs them here. Personal mail & OTPs are filtered out upstream and never
+// arrive. Replies are composed in-app, queued, and sent back out via n8n.
+
+// A conversation, grouped by the provider's thread id where available.
+model EmailThread {
+  id            String         @id @default(uuid())
+  subject       String
+  // Provider thread id (e.g. Gmail threadId) — used to group + dedupe on ingest.
+  externalId    String?        @unique
+  // Linked CRM client when a participant matches; null = unmatched / potential lead.
+  clientId      String?
+  client        Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  lastMessageAt DateTime       @default(now())
+  messages      EmailMessage[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([clientId])
+  @@index([lastMessageAt])
+}
+
+model EmailMessage {
+  id         String         @id @default(uuid())
+  threadId   String
+  thread     EmailThread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  // Provider message id — makes inbound ingestion idempotent (n8n can re-POST safely).
+  externalId String?        @unique
+  direction  EmailDirection
+  status     EmailStatus    @default(RECEIVED)
+  fromName   String?
+  fromEmail  String
+  // Recipients stored as comma-separated addresses (simple; sufficient for v1).
+  toEmails   String
+  ccEmails   String?
+  subject    String
+  bodyText   String
+  bodyHtml   String?
+  receivedAt DateTime? // set on inbound
+  sentAt     DateTime? // set when n8n confirms an outbound send
+  // Team member who drafted/sent an outbound reply (null for inbound).
+  authorId   String?
+  author     User?          @relation("EmailAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  isRead     Boolean        @default(false)
+  needsReply Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+
+  @@index([threadId])
+  @@index([status])
+  @@index([direction, isRead])
+}

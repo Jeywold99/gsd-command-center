@@ -1,0 +1,63 @@
+{
+  "name": "GSD — Inbound Email → Command Center",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "simple": false,
+        "filters": {}
+      },
+      "id": "b1a1e001-0000-4000-8000-000000000001",
+      "name": "Gmail Trigger (Jana)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "credentials": {
+        "gmailOAuth2": { "id": "REPLACE_WITH_GMAIL_CREDENTIAL", "name": "Jana Gmail" }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Classify Jana's incoming mail and forward only client / lead / update\n// emails to the command center. Personal mail, OTPs and automated notices are\n// dropped here so they never reach GSD. Tune the two regexes below to taste.\n\nconst out = [];\n\nfor (const item of $input.all()) {\n  const d = item.json;\n\n  // -- Normalise sender --\n  const fromRaw = d.From || d.from || (d.headers && d.headers.from) || '';\n  const angle = String(fromRaw).match(/<([^>]+)>/);\n  const fromEmail = (angle ? angle[1] : String(fromRaw)).trim().toLowerCase();\n  const fromName = String(fromRaw).replace(/<[^>]+>/, '').replace(/\"/g, '').trim() || null;\n\n  const subject = d.Subject || d.subject || (d.headers && d.headers.subject) || '(no subject)';\n  const bodyText = d.text || d.textPlain || d.snippet || '';\n  const bodyHtml = d.html || d.textHtml || null;\n\n  // -- Filter: skip automated / no-reply senders --\n  const automated = /no-?reply|do-?not-?reply|mailer-daemon|postmaster|notifications?@|newsletter|unsubscribe@/i.test(fromEmail);\n\n  // -- Filter: skip OTP / verification / 2FA mail --\n  const probe = (subject + ' ' + bodyText.slice(0, 200));\n  const otp = /\\b(otp|one[- ]?time|verification|verify|security|login|sign[- ]?in)\\b[^\\n]*\\bcode\\b/i.test(probe)\n           || /\\bcode\\b[^\\n]*\\b\\d{4,8}\\b/i.test(probe)\n           || /\\byour .*code is\\b/i.test(probe)\n           || /2fa|two[- ]?factor/i.test(probe);\n\n  if (automated || otp) continue;\n\n  out.push({\n    json: {\n      externalId: d.id || d.messageId || undefined,\n      threadExternalId: d.threadId || undefined,\n      fromEmail,\n      fromName,\n      to: d.To || d.to || $env.GSD_INBOX_ADDRESS || '',\n      subject,\n      bodyText: bodyText || '(no text body)',\n      bodyHtml,\n      receivedAt: d.date ? new Date(d.date).toISOString() : new Date().toISOString(),\n    },\n  });\n}\n\nreturn out;"
+      },
+      "id": "b1a1e001-0000-4000-8000-000000000002",
+      "name": "Classify & filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GSD_BASE_URL }}/api/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.GSD_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "b1a1e001-0000-4000-8000-000000000003",
+      "name": "POST /api/emails",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 300]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger (Jana)": {
+      "main": [[{ "node": "Classify & filter", "type": "main", "index": 0 }]]
+    },
+    "Classify & filter": {
+      "main": [[{ "node": "POST /api/emails", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
