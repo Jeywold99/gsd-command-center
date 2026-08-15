@@ -15,13 +15,16 @@ type BillingInput = {
 };
 function parseBilling(formData: FormData): BillingInput | null {
   const type = formData.get("billingType") === "FIXED" ? "FIXED" : "HOURLY";
+  // `billingRate` = per-hour rate (HOURLY) or retainer fee (FIXED).
+  const r = str(formData.get("billingRate"));
+  const rateOk = r != null && !isNaN(Number(r));
   if (type === "FIXED") {
     const h = str(formData.get("hoursPerWeek"));
-    if (!h || isNaN(Number(h))) return null;
-    return { type, rate: null, hoursPerWeek: h };
+    const hoursOk = h != null && !isNaN(Number(h));
+    if (!rateOk && !hoursOk) return null;
+    return { type, rate: rateOk ? r : null, hoursPerWeek: hoursOk ? h : null };
   }
-  const r = str(formData.get("billingRate"));
-  if (!r || isNaN(Number(r))) return null;
+  if (!rateOk) return null;
   return { type, rate: r, hoursPerWeek: null };
 }
 // Compare a stored value (Decimal|null) with a form value (string|null) numerically.

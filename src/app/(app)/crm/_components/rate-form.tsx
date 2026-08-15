@@ -55,15 +55,24 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
             className={input}
           />
         ) : (
-          <input
-            name="hoursPerWeek"
-            type="number"
-            step="0.5"
-            min="0"
-            required
-            placeholder="Required hours / week"
-            className={input}
-          />
+          <>
+            <input
+              name="billingRate"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Retainer rate"
+              className={input}
+            />
+            <input
+              name="hoursPerWeek"
+              type="number"
+              step="0.5"
+              min="0"
+              placeholder="Required hours / week"
+              className={input}
+            />
+          </>
         )}
         <input name="note" placeholder="Note (optional)" className={input} />
         <button type="submit" className={smallBtn}>

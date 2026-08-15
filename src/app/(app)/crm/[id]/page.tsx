@@ -12,11 +12,15 @@ import {
   convertToClient,
 } from "../actions";
 
-// A billing entry → readable label ("$150/hr" or "10 hrs/wk").
+// A billing entry → readable label ("$150/hr" or "$2000 · 10 hrs/wk").
 function fmtRate(r: { type: string; rate: unknown; hoursPerWeek: unknown }): string {
-  return r.type === "FIXED"
-    ? `${r.hoursPerWeek != null ? String(r.hoursPerWeek) : "—"} hrs/wk`
-    : `$${r.rate != null ? String(r.rate) : "—"}/hr`;
+  if (r.type === "FIXED") {
+    const parts: string[] = [];
+    if (r.rate != null) parts.push(`$${String(r.rate)}`);
+    if (r.hoursPerWeek != null) parts.push(`${String(r.hoursPerWeek)} hrs/wk`);
+    return parts.join(" · ") || "Fixed";
+  }
+  return `$${r.rate != null ? String(r.rate) : "—"}/hr`;
 }
 
 const input =
@@ -263,10 +267,17 @@ export default async function ClientDetailPage({
               <>
                 <p className="text-3xl font-display text-ink tracking-wide">
                   {currentRate.type === "FIXED" ? (
-                    <>
-                      {currentRate.hoursPerWeek != null ? String(currentRate.hoursPerWeek) : "—"}
-                      <span className="text-base text-black/40"> hrs/wk</span>
-                    </>
+                    currentRate.rate != null ? (
+                      <>
+                        ${String(currentRate.rate)}
+                        <span className="text-base text-black/40"> retainer</span>
+                      </>
+                    ) : (
+                      <>
+                        {currentRate.hoursPerWeek != null ? String(currentRate.hoursPerWeek) : "—"}
+                        <span className="text-base text-black/40"> hrs/wk</span>
+                      </>
+                    )
                   ) : (
                     <>
                       ${currentRate.rate != null ? String(currentRate.rate) : "—"}
@@ -275,7 +286,13 @@ export default async function ClientDetailPage({
                   )}
                 </p>
                 <p className="text-xs text-black/40 mt-1">
-                  {currentRate.type === "FIXED" ? "Fixed retainer · " : ""}
+                  {currentRate.type === "FIXED"
+                    ? `Fixed retainer${
+                        currentRate.hoursPerWeek != null
+                          ? ` · ${String(currentRate.hoursPerWeek)} hrs/wk`
+                          : ""
+                      } · `
+                    : ""}
                   Since {fmtDate(currentRate.effectiveFrom)}
                 </p>
               </>

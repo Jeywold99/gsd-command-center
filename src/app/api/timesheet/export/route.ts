@@ -51,7 +51,8 @@ export async function GET(req: NextRequest) {
       if (!c) continue;
       const entry = c.billingRates[0];
       const fixed = entry?.type === "FIXED";
-      const rate = !fixed && entry?.rate != null ? Number(entry.rate) : 0;
+      // `rate` = per-hour rate (HOURLY) or retainer fee (FIXED).
+      const rate = entry?.rate != null ? Number(entry.rate) : 0;
       const cur = map.get(c.id) ?? { client: c.companyName, rate, seconds: 0, fixed };
       cur.seconds += e.durationSeconds ?? 0;
       cur.rate = rate;
@@ -61,9 +62,14 @@ export async function GET(req: NextRequest) {
     rows = [["Client", "Billable Hours", "Rate", "Amount"]];
     for (const v of map.values()) {
       const hrs = v.seconds / 3600;
-      // Fixed / retainer clients are billed a flat fee outside the app.
+      // Fixed / retainer clients: bill the flat retainer fee, not hours × rate.
       if (v.fixed) {
-        rows.push([v.client, hrs.toFixed(2), "—", "Flat fee (billed separately)"]);
+        rows.push([
+          v.client,
+          hrs.toFixed(2),
+          "Retainer",
+          v.rate > 0 ? v.rate.toFixed(2) : "Billed separately",
+        ]);
       } else {
         rows.push([v.client, hrs.toFixed(2), v.rate.toFixed(2), (hrs * v.rate).toFixed(2)]);
       }

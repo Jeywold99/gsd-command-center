@@ -196,17 +196,31 @@ export default function ClientForm({
               />
             </div>
           ) : (
-            <div>
-              <label className={label}>Required hours / week</label>
-              <input
-                name="hoursPerWeek"
-                type="number"
-                step="0.5"
-                min="0"
-                defaultValue={defaults.hoursPerWeek}
-                placeholder="e.g. 10"
-                className={input}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={label}>Retainer Rate</label>
+                <input
+                  name="billingRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={defaults.billingRate}
+                  placeholder="0.00"
+                  className={input}
+                />
+              </div>
+              <div>
+                <label className={label}>Required hours / week</label>
+                <input
+                  name="hoursPerWeek"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  defaultValue={defaults.hoursPerWeek}
+                  placeholder="e.g. 10"
+                  className={input}
+                />
+              </div>
             </div>
           )}
         </div>

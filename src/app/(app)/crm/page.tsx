@@ -8,7 +8,12 @@ function rateOf(
 ): string {
   const b = billingRates[0];
   if (!b) return "—";
-  if (b.type === "FIXED") return b.hoursPerWeek != null ? `${String(b.hoursPerWeek)} hrs/wk` : "Fixed";
+  if (b.type === "FIXED") {
+    const parts: string[] = [];
+    if (b.rate != null) parts.push(`$${String(b.rate)}`);
+    if (b.hoursPerWeek != null) parts.push(`${String(b.hoursPerWeek)} hrs/wk`);
+    return parts.join(" · ") || "Fixed";
+  }
   return b.rate != null ? `$${String(b.rate)}/hr` : "—";
 }
 
