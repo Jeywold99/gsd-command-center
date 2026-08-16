@@ -54,32 +54,83 @@ io.use(async (socket, next) => {
 });
 
 io.on("connection", (socket) => {
+  // Every connection joins a personal room so we can push notifications to a
+  // specific user wherever they are in the app (the bell listens app-wide).
+  const uid = socket.data.userId as string;
+  if (uid) socket.join(`user:${uid}`);
+
   socket.on("join", (channelId: string) => {
     if (channelId) socket.join(`ch:${channelId}`);
   });
   socket.on("leave", (channelId: string) => {
     if (channelId) socket.leave(`ch:${channelId}`);
   });
-  socket.on("message", async (payload: { channelId?: string; content?: string }) => {
-    const channelId = payload?.channelId;
-    const content = payload?.content?.trim();
-    if (!channelId || !content) return;
-    try {
-      const msg = await prisma.message.create({
-        data: { channelId, senderId: socket.data.userId, content },
-        include: { sender: { select: { id: true, name: true } } },
-      });
-      io.to(`ch:${channelId}`).emit("message", {
-        id: msg.id,
-        channelId,
-        content: msg.content,
-        createdAt: msg.createdAt,
-        sender: msg.sender,
-      });
-    } catch (err) {
-      console.error("message persist failed", err);
-    }
-  });
+  socket.on(
+    "message",
+    async (payload: { channelId?: string; content?: string; mentions?: string[] }) => {
+      const channelId = payload?.channelId;
+      const content = payload?.content?.trim();
+      if (!channelId || !content) return;
+      const senderId = socket.data.userId as string;
+      try {
+        const msg = await prisma.message.create({
+          data: { channelId, senderId, content },
+          include: { sender: { select: { id: true, name: true } } },
+        });
+        io.to(`ch:${channelId}`).emit("message", {
+          id: msg.id,
+          channelId,
+          content: msg.content,
+          createdAt: msg.createdAt,
+          sender: msg.sender,
+        });
+
+        // @mentions → in-app notifications (dedupe, never notify yourself).
+        const mentioned = [...new Set(payload.mentions ?? [])].filter(
+          (id) => id && id !== senderId,
+        );
+        if (mentioned.length > 0) {
+          try {
+            const channel = await prisma.channel.findUnique({
+              where: { id: channelId },
+              select: { name: true },
+            });
+            const title = `${msg.sender.name} mentioned you in #${channel?.name ?? "a channel"}`;
+            const body = content.slice(0, 140);
+            const linkUrl = `/chat?channel=${channelId}`;
+            // Persist one row per user, then push it live to that user's room so
+            // the bell updates instantly (no navigation needed).
+            for (const userId of mentioned) {
+              const notif = await prisma.notification.create({
+                data: {
+                  userId,
+                  type: "MENTION",
+                  title,
+                  body,
+                  entityType: "channel",
+                  entityId: channelId,
+                  linkUrl,
+                },
+              });
+              io.to(`user:${userId}`).emit("notification", {
+                id: notif.id,
+                type: notif.type,
+                title: notif.title,
+                body: notif.body,
+                linkUrl: notif.linkUrl,
+                isRead: false,
+                createdAt: notif.createdAt,
+              });
+            }
+          } catch (err) {
+            console.error("mention notify failed", err);
+          }
+        }
+      } catch (err) {
+        console.error("message persist failed", err);
+      }
+    },
+  );
 });
 
 httpServer.listen(PORT, () => {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { io, type Socket } from "socket.io-client";
 import { Bell, CheckCheck } from "lucide-react";
 import {
   markAllNotificationsRead,
@@ -17,10 +18,10 @@ type Item = {
   body: string | null;
   linkUrl: string | null;
   isRead: boolean;
-  createdAt: Date;
+  createdAt: Date | string;
 };
 
-function relativeTime(date: Date): string {
+function relativeTime(date: Date | string): string {
   const diff = Date.now() - new Date(date).getTime();
   const min = Math.floor(diff / 60000);
   if (min < 1) return "just now";
@@ -45,15 +46,54 @@ export default function NotificationBell({
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Notifications pushed live over the socket. Never reset from props — instead
+  // we dedupe against props in render, so once the server list catches up (on
+  // navigation) these fall away naturally. Avoids syncing props into state.
+  const [live, setLive] = useState<Item[]>([]);
+  const [toast, setToast] = useState<Item | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // App-wide socket: the server pushes `notification` to this user's room, so
+  // the bell updates wherever the user is — no navigation needed.
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
+    const s: Socket = io(url, { withCredentials: true });
+    s.on("notification", (n: Item) => {
+      setLive((prev) =>
+        prev.some((x) => x.id === n.id) ? prev : [{ ...n, isRead: false }, ...prev],
+      );
+      setToast(n);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setToast(null), 6000);
+    });
+    return () => {
+      s.disconnect();
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  // Merge live pushes with the authoritative server list (live ones the server
+  // already knows about are dropped by id).
+  const propIds = useMemo(
+    () => new Set(notifications.map((n) => n.id)),
+    [notifications],
+  );
+  const freshLive = useMemo(
+    () => live.filter((l) => !propIds.has(l.id)),
+    [live, propIds],
+  );
+  const items = useMemo(
+    () => [...freshLive, ...notifications],
+    [freshLive, notifications],
+  );
+  const unread = unreadCount + freshLive.length;
+
   // Close on outside click or Escape.
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
       const t = e.target as Node;
-      if (
-        panelRef.current?.contains(t) ||
-        buttonRef.current?.contains(t)
-      ) {
+      if (panelRef.current?.contains(t) || buttonRef.current?.contains(t)) {
         return;
       }
       setOpen(false);
@@ -85,6 +125,11 @@ export default function NotificationBell({
     });
   }
 
+  function openToast(item: Item) {
+    setToast(null);
+    if (item.linkUrl) router.push(item.linkUrl);
+  }
+
   return (
     <div className="relative">
       <button
@@ -96,9 +141,9 @@ export default function NotificationBell({
         aria-expanded={open}
       >
         <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
+        {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-brand text-white text-[10px] font-bold leading-4 text-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {unread > 9 ? "9+" : unread}
           </span>
         )}
       </button>
@@ -113,7 +158,7 @@ export default function NotificationBell({
             <p className="font-display text-lg tracking-wide text-ink">
               Notifications
             </p>
-            {unreadCount > 0 && (
+            {unread > 0 && (
               <button
                 onClick={handleMarkAll}
                 disabled={isPending}
@@ -126,7 +171,7 @@ export default function NotificationBell({
           </div>
 
           <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {items.length === 0 ? (
               <div className="px-4 py-10 text-center">
                 <Bell className="w-8 h-8 mx-auto text-black/15" />
                 <p className="mt-2 text-sm text-black/45">
@@ -135,7 +180,7 @@ export default function NotificationBell({
               </div>
             ) : (
               <ul className="divide-y divide-black/[0.05]">
-                {notifications.map((n) => (
+                {items.map((n) => (
                   <li key={n.id}>
                     <button
                       onClick={() => handleClickItem(n)}
@@ -169,6 +214,29 @@ export default function NotificationBell({
             )}
           </div>
         </div>
+      )}
+
+      {/* Live toast — pops when a notification arrives while you're elsewhere. */}
+      {toast && (
+        <button
+          type="button"
+          onClick={() => openToast(toast)}
+          className="fixed bottom-5 right-5 z-[60] flex w-80 max-w-[calc(100vw-2.5rem)] items-start gap-3 rounded-xl border border-black/[0.08] bg-white p-3.5 text-left shadow-2xl"
+        >
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/12 text-brand">
+            <Bell className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-ink">
+              {toast.title}
+            </span>
+            {toast.body && (
+              <span className="mt-0.5 block truncate text-xs text-black/55">
+                {toast.body}
+              </span>
+            )}
+          </span>
+        </button>
       )}
     </div>
   );

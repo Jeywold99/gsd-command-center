@@ -39,3 +39,17 @@ body {
   color: var(--foreground);
   font-family: var(--font-outfit), system-ui, sans-serif;
 }
+
+/* ── BlockNote (task Notes editor) ────────────────────────────────────────── */
+/* The drag-handle menu (delete / colour) opens leftward from the block's left
+   gutter, so its left edge lands over the fixed sidebar. BlockNote renders this
+   menu inline (not portaled) inside a floating wrapper whose z-index is
+   `calc(var(--bn-ui-base-z-index) + 20)` — and the base defaults to 0, so the
+   wrapper sits at z-20, BELOW the sidebar (z-30) and its left edge is painted
+   over. Raising the base lifts the whole floating-UI group above the app
+   chrome (sidebar z-30, header z-20). Scoped to our editor via .bn-wrap.
+   Must target .bn-root (not just .bn-container): an inner .bn-root re-declares
+   the variable to 0, so the wrapper would otherwise still inherit 0. */
+.bn-wrap .bn-root {
+  --bn-ui-base-z-index: 40 !important;
+}

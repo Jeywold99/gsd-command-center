@@ -9,9 +9,18 @@ const allowedOrigins = process.env.GSD_ALLOWED_ORIGIN
 
 const nextConfig: NextConfig = {
   experimental: {
+    // Uploads POST to a page route, which runs proxy.ts (middleware) first — and
+    // the proxy has its OWN body cap (default 10MB) that truncates the request
+    // before the Server Action runs (symptom: "Unexpected end of form" → 500).
+    // Must be raised alongside serverActions.bodySizeLimit for large uploads.
+    proxyClientMaxBodySize: "100mb",
     serverActions: {
-      // Allow file uploads through Server Actions (Vault). Default is 1MB.
-      bodySizeLimit: "12mb",
+      // Max upload size for Server Actions (Vault docs, task attachments, and
+      // Notes media incl. video). Default is 1MB. Server Actions buffer the
+      // whole body in memory, so on the 4GB Pi keep this sane — 100MB covers
+      // short videos/screen-recordings; for anything larger, paste a link via
+      // the media block's "Embed" tab instead of uploading.
+      bodySizeLimit: "100mb",
       ...(allowedOrigins ? { allowedOrigins } : {}),
     },
   },

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus, Hash, MessageSquare } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
 import { listChannels, getChannel, getMessages } from "@/lib/chat";
-import { listActiveClients } from "@/lib/projects";
+import { listActiveClients, listUsers } from "@/lib/projects";
 import { listProjectOptions } from "@/lib/time";
 import { createChannel } from "./actions";
 import ChatRoom from "./_components/chat-room";
@@ -23,11 +23,12 @@ export default async function ChatPage({
   searchParams: Promise<{ channel?: string }>;
 }) {
   const { channel } = await searchParams;
-  const [me, channels, clients, projects] = await Promise.all([
+  const [me, channels, clients, projects, users] = await Promise.all([
     getCurrentUser(),
     listChannels(),
     listActiveClients(),
     listProjectOptions(),
+    listUsers(),
   ]);
 
   const selected = channel ? await getChannel(channel) : null;
@@ -48,9 +49,13 @@ export default async function ChatPage({
             <summary className="w-7 h-7 rounded-lg bg-brand text-white flex items-center justify-center cursor-pointer list-none">
               <Plus className="w-4 h-4" />
             </summary>
+            {/* Opens left-aligned (rightward into the chat area): the popover
+                is wider (w-72) than the 240px channel sidebar, and the outer
+                panel has overflow-hidden — anchoring it right-0 pushed its left
+                edge ~60px past the panel's left edge, where it got clipped. */}
             <form
               action={createChannel}
-              className="absolute right-0 mt-2 w-72 bg-white border border-black/10 rounded-xl shadow-lg p-4 space-y-3 z-30"
+              className="absolute left-0 mt-2 w-72 bg-white border border-black/10 rounded-xl shadow-lg p-4 space-y-3 z-30"
             >
               <div>
                 <label className={label}>Channel name *</label>
@@ -146,6 +151,7 @@ export default async function ChatPage({
               sender: m.sender,
             }))}
             meId={me?.id ?? ""}
+            users={users.map((u) => ({ id: u.id, name: u.name }))}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center p-6">

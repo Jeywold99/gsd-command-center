@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySession, requireRole } from "@/lib/dal";
 import { notifyMany } from "@/lib/notifications";
-import { saveFile, removeFile } from "@/lib/storage";
+import { saveFile } from "@/lib/storage";
 import { str, date } from "@/lib/forms";
 import type { ClientFormState } from "@/lib/definitions";
 
@@ -332,40 +332,32 @@ export async function quickAddTask(formData: FormData) {
   revalidatePath(`/projects/${projectId}`);
 }
 
-// ── Task attachments (images/files, previewed on the task) ──
-export async function uploadTaskAttachment(formData: FormData) {
+// ── Notes editor file uploads (BlockNote image/file/video/audio blocks) ──
+// Called directly (not as a form action) by the client editor's `uploadFile`
+// hook. Stores the file like any document — owned by the task so it is cleaned
+// up on task delete — and returns a URL the editor renders inline.
+export async function uploadNoteFile(formData: FormData): Promise<string> {
   const session = await verifySession();
   const taskId = str(formData.get("taskId"));
-  const projectId = str(formData.get("projectId"));
   const file = formData.get("file");
-  if (!taskId || !(file instanceof File) || file.size === 0) return;
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("No file provided.");
+  }
 
   const { storagePath, sizeBytes } = await saveFile(file);
-  await prisma.document.create({
+  const doc = await prisma.document.create({
     data: {
       name: file.name,
       storagePath,
       mimeType: file.type || "application/octet-stream",
       sizeBytes,
-      taskId,
+      taskId: taskId || null,
       uploadedById: session.userId,
     },
   });
-  if (projectId) revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
-}
-
-export async function deleteTaskAttachment(formData: FormData) {
-  await verifySession();
-  const id = str(formData.get("id"));
-  const taskId = str(formData.get("taskId"));
-  const projectId = str(formData.get("projectId"));
-  if (!id) return;
-  const doc = await prisma.document.findUnique({ where: { id } });
-  if (doc) {
-    await removeFile(doc.storagePath);
-    await prisma.document.delete({ where: { id } });
-  }
-  if (projectId && taskId) revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
+  // Same-origin URL; the browser sends the session cookie so the auth-gated
+  // route serves it. `inline=1` lets images/PDFs render in place.
+  return `/api/files/${doc.id}?inline=1`;
 }
 
 // Autosave the Notion-style Notes (BlockNote blocks JSON). No revalidate — the
