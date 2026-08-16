@@ -367,3 +367,14 @@ export async function deleteTaskAttachment(formData: FormData) {
   }
   if (projectId && taskId) revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
 }
+
+// Autosave the Notion-style Notes (BlockNote blocks JSON). No revalidate — the
+// editor owns its state client-side; this just persists.
+export async function updateTaskNotes(taskId: string, content: unknown) {
+  await verifySession();
+  if (!taskId) return;
+  await prisma.task.update({
+    where: { id: taskId },
+    data: { content: (content ?? undefined) as never },
+  });
+}

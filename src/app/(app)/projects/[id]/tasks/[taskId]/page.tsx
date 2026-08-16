@@ -13,6 +13,7 @@ import {
 import { COLUMNS } from "../../../_components/task-badges";
 import AssigneePicker from "../../../_components/assignee-picker";
 import SubtaskList from "../../../_components/subtask-list";
+import TaskNotes from "../../../_components/task-notes";
 
 const input =
   "w-full bg-white border border-black/10 rounded-xl px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -126,6 +127,12 @@ export default async function TaskPage({
       {/* ── Attachments + Subtasks (left) · Assignees + Reminders (right) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* Notes (Notion-style block editor) */}
+          <div className={card}>
+            <h3 className="font-display text-2xl tracking-wide text-ink mb-3">Notes</h3>
+            <TaskNotes taskId={task.id} initialContent={task.content} />
+          </div>
+
           {/* Attachments */}
           <div className={card}>
             <h3 className="font-display text-2xl tracking-wide text-ink mb-4 flex items-center gap-2">

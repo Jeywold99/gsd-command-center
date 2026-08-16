@@ -319,6 +319,8 @@ model Task {
   id          String     @id @default(uuid())
   title       String
   description String?
+  // Notion-style rich "Notes" (BlockNote blocks), separate from the plain description.
+  content     Json?
   status      TaskStatus @default(TODO)
   priority    Priority   @default(MEDIUM)
   // Null projectId = "inbox" (e.g. a task piped in from n8n before triage).
