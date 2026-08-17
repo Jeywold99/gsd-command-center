@@ -12,18 +12,19 @@ const taskInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
 } as const;
 
-// Cross-project task views (top-level tasks only).
-export async function listMyTasks(userId: string) {
+// Cross-project task views (top-level tasks only). Archived tasks are excluded
+// from the active views; pass archivedOnly=true to list the archive instead.
+export async function listMyTasks(userId: string, archivedOnly = false) {
   return prisma.task.findMany({
-    where: { parentId: null, assignees: { some: { userId } } },
+    where: { parentId: null, isArchived: archivedOnly, assignees: { some: { userId } } },
     orderBy: [{ status: "asc" }, { dueDate: "asc" }, { position: "asc" }],
     include: taskInclude,
   });
 }
 
-export async function listAllTasks() {
+export async function listAllTasks(archivedOnly = false) {
   return prisma.task.findMany({
-    where: { parentId: null },
+    where: { parentId: null, isArchived: archivedOnly },
     orderBy: [{ status: "asc" }, { dueDate: "asc" }, { position: "asc" }],
     include: taskInclude,
   });

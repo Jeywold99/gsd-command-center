@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ListChecks, Plus, LayoutGrid, Table } from "lucide-react";
+import { ListChecks, Plus, LayoutGrid, Table, Archive } from "lucide-react";
 import { verifySession } from "@/lib/dal";
 import { listAllTasks } from "@/lib/tasks";
 import { listProjectOptions } from "@/lib/time";
@@ -16,12 +16,13 @@ const label = "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.
 export default async function TasksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ user?: string; view?: string }>;
+  searchParams: Promise<{ user?: string; view?: string; archived?: string }>;
 }) {
   const session = await verifySession();
   const sp = await searchParams;
+  const archivedOnly = sp.archived === "1";
   const [tasks, projects, users] = await Promise.all([
-    listAllTasks(),
+    listAllTasks(archivedOnly),
     listProjectOptions(),
     listUsers(),
   ]);
@@ -59,10 +60,11 @@ export default async function TasksPage({
 
   // Build /tasks hrefs, keeping the other param intact.
   const viewParam = view === "table" ? "table" : undefined;
-  const hrefWith = (user?: string, v?: string) => {
+  const hrefWith = (user?: string, v?: string, archived = archivedOnly) => {
     const p = new URLSearchParams();
     if (user) p.set("user", user);
     if (v) p.set("view", v);
+    if (archived) p.set("archived", "1");
     const qs = p.toString();
     return `/tasks${qs ? `?${qs}` : ""}`;
   };
@@ -76,8 +78,9 @@ export default async function TasksPage({
       active ? "bg-white text-ink shadow-sm" : "text-ink/50 hover:text-ink"
     }`;
 
-  const emptyMsg =
-    scope === "all"
+  const emptyMsg = archivedOnly
+    ? "No archived tasks."
+    : scope === "all"
       ? "No tasks yet."
       : scope === "everyone"
         ? "No tasks are assigned to the whole team."
@@ -110,6 +113,16 @@ export default async function TasksPage({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Active / Archived toggle */}
+          <div className="inline-flex rounded-full bg-cream border border-black/10 p-1">
+            <Link href={hrefWith(sp.user, viewParam, false)} className={viewBtn(!archivedOnly)}>
+              Active
+            </Link>
+            <Link href={hrefWith(sp.user, viewParam, true)} className={viewBtn(archivedOnly)}>
+              <Archive className="w-3.5 h-3.5" /> Archived
+            </Link>
+          </div>
+
           {/* View toggle */}
           <div className="inline-flex rounded-full bg-cream border border-black/10 p-1">
             <Link href={hrefWith(sp.user, undefined)} className={viewBtn(view === "board")}>
@@ -186,6 +199,14 @@ export default async function TasksPage({
           </details>
         </div>
       </div>
+
+      {archivedOnly && (
+        <div className="rounded-xl border border-black/[0.08] bg-cream/60 px-4 py-2.5 text-sm text-ink/60 flex items-center gap-2">
+          <Archive className="w-4 h-4 text-ink/40 shrink-0" />
+          Viewing archived tasks. Switch to <span className="font-semibold">Table</span> view,
+          select tasks, and choose <span className="font-semibold">Restore</span> to bring them back.
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="bg-white border border-dashed border-black/15 rounded-2xl p-14 text-center">

@@ -245,6 +245,7 @@ export async function bulkUpdateTasks(
     dueDate?: string;
     clearDueDate?: boolean;
     projectId?: string;
+    archived?: boolean;
   },
 ) {
   const session = await verifySession();
@@ -255,6 +256,7 @@ export async function bulkUpdateTasks(
   const data: Record<string, unknown> = {};
   if (changes.priority) data.priority = changes.priority;
   if (changes.projectId) data.projectId = changes.projectId;
+  if (changes.archived !== undefined) data.isArchived = changes.archived;
   if (changes.clearDueDate) {
     data.dueDate = null;
   } else if (changes.dueDate) {

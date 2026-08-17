@@ -18,11 +18,17 @@ export async function getDashboardData(userId: string) {
     prisma.client.count({ where: { status: "LEAD" } }),
     prisma.project.count({ where: { status: "ACTIVE" } }),
     prisma.task.count({
-      where: { parentId: null, status: { not: "DONE" }, dueDate: { lt: now } },
+      where: {
+        parentId: null,
+        isArchived: false,
+        status: { not: "DONE" },
+        dueDate: { lt: now },
+      },
     }),
     prisma.task.findMany({
       where: {
         parentId: null,
+        isArchived: false,
         status: { not: "DONE" },
         assignees: { some: { userId } },
       },

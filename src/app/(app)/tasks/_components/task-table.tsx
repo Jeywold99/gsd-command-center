@@ -55,6 +55,7 @@ export default function TaskTable({
   const [projectId, setProjectId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [clearDue, setClearDue] = useState(false);
+  const [archived, setArchived] = useState(""); // "" | "archive" | "restore"
 
   const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -99,6 +100,7 @@ export default function TaskTable({
     setProjectId("");
     setDueDate("");
     setClearDue(false);
+    setArchived("");
   }
 
   const changes: Parameters<typeof bulkUpdateTasks>[1] = {};
@@ -107,6 +109,8 @@ export default function TaskTable({
   if (projectId) changes.projectId = projectId;
   if (clearDue) changes.clearDueDate = true;
   else if (dueDate) changes.dueDate = dueDate;
+  if (archived === "archive") changes.archived = true;
+  else if (archived === "restore") changes.archived = false;
   const hasChange = Object.keys(changes).length > 0;
 
   function apply() {
@@ -210,22 +214,29 @@ export default function TaskTable({
               </label>
             </div>
 
-            <div className="flex items-end">
-              <button
-                type="button"
-                onClick={apply}
-                disabled={!hasChange || isPending}
-                className="w-full bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold uppercase tracking-wide py-2 rounded-full transition-colors"
-              >
-                {isPending ? "Applying…" : "Apply"}
-              </button>
+            <div>
+              <label className={flabel}>Archive</label>
+              <select className={field} value={archived} onChange={(e) => setArchived(e.target.value)}>
+                <option value="">— keep —</option>
+                <option value="archive">Archive</option>
+                <option value="restore">Restore</option>
+              </select>
             </div>
           </div>
-          {!hasChange && (
-            <p className="mt-2 text-[11px] text-white/45">
-              Set at least one field above to apply changes.
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="text-[11px] text-white/45">
+              {hasChange ? "Applies to all selected tasks." : "Set at least one field to apply changes."}
             </p>
-          )}
+            <button
+              type="button"
+              onClick={apply}
+              disabled={!hasChange || isPending}
+              className="bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold uppercase tracking-wide px-8 py-2 rounded-full transition-colors"
+            >
+              {isPending ? "Applying…" : "Apply"}
+            </button>
+          </div>
         </div>
       )}
 

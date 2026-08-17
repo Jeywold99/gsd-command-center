@@ -349,6 +349,8 @@ model Task {
   dueDate     DateTime?
   // Ordering within a Kanban column.
   position    Int        @default(0)
+  // Archived tasks are hidden from the active task views (restorable).
+  isArchived  Boolean    @default(false)
   completedAt DateTime?
   createdById String?
   createdBy   User?      @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -366,6 +368,7 @@ model Task {
   @@index([parentId])
   @@index([status])
   @@index([dueDate])
+  @@index([isArchived])
 }
 
 // Join table: a task can have several assignees.

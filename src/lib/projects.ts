@@ -19,7 +19,7 @@ export async function getProject(id: string) {
       client: { select: { id: true, companyName: true, colorHex: true } },
       milestones: { orderBy: { order: "asc" } },
       tasks: {
-        where: { parentId: null },
+        where: { parentId: null, isArchived: false },
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
         include: {
           assignees: { include: { user: { select: { id: true, name: true } } } },

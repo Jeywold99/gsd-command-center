@@ -15,7 +15,7 @@ export async function listEvents(from: Date, to: Date) {
 // Task due dates are overlaid on the calendar (not duplicated as events).
 export async function listTaskDue(from: Date, to: Date) {
   return prisma.task.findMany({
-    where: { parentId: null, dueDate: { gte: from, lt: to } },
+    where: { parentId: null, isArchived: false, dueDate: { gte: from, lt: to } },
     orderBy: { dueDate: "asc" },
     select: {
       id: true,
