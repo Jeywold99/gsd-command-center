@@ -8,8 +8,40 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
-import { getDashboardData } from "@/lib/dashboard";
+import { getDashboardData, getWeeklyIncome } from "@/lib/dashboard";
 import { fmtDate, initials } from "./projects/_components/task-badges";
+import WorldClocks from "./_components/world-clocks";
+
+const money = (n: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(n);
+
+function incomeBasis(r: {
+  billingType: "HOURLY" | "FIXED" | null;
+  rate: number | null;
+  hoursPerWeek: number | null;
+  payFrequency: string | null;
+}) {
+  if (r.billingType === "HOURLY") {
+    if (r.rate != null && r.hoursPerWeek != null)
+      return `$${r.rate}/hr × ${r.hoursPerWeek}h`;
+    if (r.rate != null) return `$${r.rate}/hr · set hours/wk`;
+    return "Set an hourly rate";
+  }
+  if (r.billingType === "FIXED") {
+    const freq =
+      r.payFrequency === "MONTHLY"
+        ? "monthly"
+        : r.payFrequency === "BIWEEKLY"
+          ? "bi-weekly"
+          : "weekly";
+    return r.rate != null ? `Fixed · ${freq}` : "Set a retainer";
+  }
+  return "No billing set";
+}
 
 function StatTile({
   label,
@@ -58,7 +90,10 @@ function isOverdue(d: Date | null) {
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  const d = await getDashboardData(user?.id ?? "");
+  const [d, income] = await Promise.all([
+    getDashboardData(user?.id ?? ""),
+    getWeeklyIncome(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -85,6 +120,57 @@ export default async function DashboardPage() {
           icon={AlertTriangle}
           accent={d.overdueTasks > 0 ? "danger" : "brand"}
         />
+      </div>
+
+      {/* Weekly income + client clocks */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="lg:col-span-2 bg-white rounded-2xl border border-black/[0.07] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display text-2xl tracking-wide text-ink">Weekly Income</h3>
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/45">
+                Projected / week
+              </p>
+              <p className="font-display text-3xl tracking-wide text-brand leading-none">
+                {money(income.total)}
+              </p>
+            </div>
+          </div>
+          {income.rows.length === 0 ? (
+            <p className="text-sm text-black/40">No active clients yet.</p>
+          ) : (
+            <ul className="divide-y divide-black/[0.05]">
+              {income.rows.map((r) => (
+                <li key={r.id} className="flex items-center gap-3 py-2.5">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: r.colorHex ?? "#cbd5e1" }}
+                  />
+                  <Link
+                    href={`/crm/${r.id}`}
+                    className="flex-1 min-w-0 hover:text-brand"
+                  >
+                    <span className="text-sm font-semibold text-ink block truncate">
+                      {r.companyName}
+                    </span>
+                    <span className="text-xs text-black/40">{incomeBasis(r)}</span>
+                  </Link>
+                  <span className="text-sm font-bold text-ink tabular-nums shrink-0">
+                    {r.weekly != null ? money(r.weekly) : "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
+          <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Client Clocks</h3>
+          <WorldClocks />
+          <p className="mt-3 text-[11px] text-black/40">
+            Live local time in the zones we work across.
+          </p>
+        </section>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

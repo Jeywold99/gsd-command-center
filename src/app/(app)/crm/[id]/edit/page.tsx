@@ -48,6 +48,8 @@ export default async function EditClientPage({
           website: client.website ?? "",
           health: client.health ?? "",
           colorHex: client.colorHex ?? "#FF5C00",
+          timezone: client.timezone ?? "",
+          payFrequency: client.payFrequency ?? "",
           startDate: toDateInput(client.startDate),
           renewalDate: toDateInput(client.renewalDate),
           billingType: rate?.type ?? "HOURLY",

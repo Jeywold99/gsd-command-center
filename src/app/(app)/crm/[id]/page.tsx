@@ -4,6 +4,7 @@ import { ArrowLeft, Pencil, ExternalLink, Plus } from "lucide-react";
 import { getClientById } from "@/lib/crm";
 import { StatusBadge, HealthDot, StageLabel, fmtDate } from "../_components/badges";
 import BillingRateForm from "../_components/rate-form";
+import ClientClock from "../_components/client-clock";
 import {
   addNote,
   addContact,
@@ -22,6 +23,12 @@ function fmtRate(r: { type: string; rate: unknown; hoursPerWeek: unknown }): str
   }
   return `$${r.rate != null ? String(r.rate) : "—"}/hr`;
 }
+
+const PAY_FREQUENCY_LABEL: Record<string, string> = {
+  WEEKLY: "Weekly",
+  BIWEEKLY: "Bi-weekly",
+  MONTHLY: "Once a month",
+};
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -210,6 +217,17 @@ export default async function ClientDetailPage({
             <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Details</h3>
             <dl className="space-y-2.5 text-sm">
               <Row k="Service" v={client.serviceType ?? "—"} />
+              <div className="flex justify-between gap-4">
+                <dt className="text-black/45">Timezone</dt>
+                <dd className="text-ink font-medium text-right">
+                  {client.timezone ? (
+                    <ClientClock timezone={client.timezone} />
+                  ) : (
+                    "—"
+                  )}
+                </dd>
+              </div>
+              <Row k="Pay frequency" v={PAY_FREQUENCY_LABEL[client.payFrequency ?? ""] ?? "—"} />
               <Row k="Start date" v={fmtDate(client.startDate)} />
               <Row k="Renewal" v={fmtDate(client.renewalDate)} />
               <Row k="Currency" v={client.currency} />

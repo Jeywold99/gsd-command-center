@@ -45,15 +45,25 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
         <input type="hidden" name="billingType" value={type} />
 
         {type === "HOURLY" ? (
-          <input
-            name="billingRate"
-            type="number"
-            step="0.01"
-            min="0"
-            required
-            placeholder="Hourly rate"
-            className={input}
-          />
+          <>
+            <input
+              name="billingRate"
+              type="number"
+              step="0.01"
+              min="0"
+              required
+              placeholder="Hourly rate"
+              className={input}
+            />
+            <input
+              name="hoursPerWeek"
+              type="number"
+              step="0.5"
+              min="0"
+              placeholder="Agreed hours / week (optional)"
+              className={input}
+            />
+          </>
         ) : (
           <>
             <input

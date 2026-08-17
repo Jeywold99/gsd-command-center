@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/dal";
 import { listNotifications, countUnread } from "@/lib/notifications";
+import { getRunningEntry } from "@/lib/time";
 import AppShell from "./_components/app-shell";
 
 // Wraps every authenticated feature route with the GSD shell.
@@ -13,10 +14,15 @@ export default async function AppLayout({
 }) {
   const user = await getCurrentUser();
 
-  // The notification bell reads the current user's recent items + unread count.
-  const [notifications, unreadCount] = user
-    ? await Promise.all([listNotifications(user.id), countUnread(user.id)])
-    : [[], 0];
+  // The notification bell reads the current user's recent items + unread count;
+  // the clock-in button needs any currently-running time entry.
+  const [notifications, unreadCount, running] = user
+    ? await Promise.all([
+        listNotifications(user.id),
+        countUnread(user.id),
+        getRunningEntry(user.id),
+      ])
+    : [[], 0, null];
 
   return (
     <AppShell
@@ -27,6 +33,7 @@ export default async function AppLayout({
       }}
       notifications={notifications}
       unreadCount={unreadCount}
+      running={running ? { startedAt: running.startedAt } : null}
     >
       {children}
     </AppShell>

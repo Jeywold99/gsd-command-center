@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "./notification-bell";
+import ClockInButton from "./clock-in-button";
 
 type Notification = {
   id: string;
@@ -116,11 +117,13 @@ export default function AppShell({
   user,
   notifications,
   unreadCount,
+  running,
   children,
 }: {
   user: { name: string; email: string; role: string };
   notifications: Notification[];
   unreadCount: number;
+  running: { startedAt: string | Date } | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -226,6 +229,8 @@ export default function AppShell({
           </div>
 
           <div className="flex items-center gap-3">
+            <ClockInButton running={running} />
+
             <NotificationBell
               notifications={notifications}
               unreadCount={unreadCount}

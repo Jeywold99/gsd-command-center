@@ -18,14 +18,13 @@ function parseBilling(formData: FormData): BillingInput | null {
   // `billingRate` = per-hour rate (HOURLY) or retainer fee (FIXED).
   const r = str(formData.get("billingRate"));
   const rateOk = r != null && !isNaN(Number(r));
-  if (type === "FIXED") {
-    const h = str(formData.get("hoursPerWeek"));
-    const hoursOk = h != null && !isNaN(Number(h));
-    if (!rateOk && !hoursOk) return null;
-    return { type, rate: rateOk ? r : null, hoursPerWeek: hoursOk ? h : null };
-  }
-  if (!rateOk) return null;
-  return { type, rate: r, hoursPerWeek: null };
+  // `hoursPerWeek` applies to both types now: required hours for a FIXED
+  // retainer, or the agreed weekly hours behind an HOURLY arrangement (drives
+  // the weekly income calculator).
+  const h = str(formData.get("hoursPerWeek"));
+  const hoursOk = h != null && !isNaN(Number(h));
+  if (!rateOk && !hoursOk) return null;
+  return { type, rate: rateOk ? r : null, hoursPerWeek: hoursOk ? h : null };
 }
 // Compare a stored value (Decimal|null) with a form value (string|null) numerically.
 function sameNum(a: unknown, b: string | null): boolean {
@@ -63,6 +62,8 @@ export async function createClient(
         website: str(formData.get("website")),
         health: (str(formData.get("health")) as never) ?? null,
         colorHex: str(formData.get("colorHex")),
+        timezone: str(formData.get("timezone")),
+        payFrequency: (str(formData.get("payFrequency")) as never) ?? null,
         startDate: date(formData.get("startDate")),
         renewalDate: date(formData.get("renewalDate")),
       },
@@ -118,6 +119,8 @@ export async function updateClient(
       website: str(formData.get("website")),
       health: (str(formData.get("health")) as never) ?? null,
       colorHex: str(formData.get("colorHex")),
+      timezone: str(formData.get("timezone")),
+      payFrequency: (str(formData.get("payFrequency")) as never) ?? null,
       startDate: date(formData.get("startDate")),
       renewalDate: date(formData.get("renewalDate")),
     },

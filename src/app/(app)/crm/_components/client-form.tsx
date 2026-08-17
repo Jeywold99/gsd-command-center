@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import type { ClientFormState } from "@/lib/definitions";
+import { TIMEZONES } from "@/lib/timezones";
 
 const input =
   "w-full bg-white border border-black/10 rounded-xl px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -21,6 +22,8 @@ type Defaults = {
   billingType?: string;
   billingRate?: string;
   hoursPerWeek?: string;
+  timezone?: string;
+  payFrequency?: string;
 };
 
 export default function ClientForm({
@@ -137,6 +140,32 @@ export default function ClientForm({
         </div>
 
         <div>
+          <label className={label}>Timezone</label>
+          <select name="timezone" className={input} defaultValue={defaults.timezone ?? ""}>
+            <option value="">—</option>
+            {TIMEZONES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={label}>Pay Frequency</label>
+          <select
+            name="payFrequency"
+            className={input}
+            defaultValue={defaults.payFrequency ?? ""}
+          >
+            <option value="">—</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="BIWEEKLY">Bi-weekly</option>
+            <option value="MONTHLY">Once a month</option>
+          </select>
+        </div>
+
+        <div>
           <label className={label}>Calendar Color</label>
           <input
             type="color"
@@ -183,17 +212,34 @@ export default function ClientForm({
           <input type="hidden" name="billingType" value={billingType} />
 
           {billingType === "HOURLY" ? (
-            <div>
-              <label className={label}>Rate (per hour)</label>
-              <input
-                name="billingRate"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={defaults.billingRate}
-                placeholder="0.00"
-                className={input}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={label}>Rate (per hour)</label>
+                <input
+                  name="billingRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={defaults.billingRate}
+                  placeholder="0.00"
+                  className={input}
+                />
+              </div>
+              <div>
+                <label className={label}>Agreed hours / week</label>
+                <input
+                  name="hoursPerWeek"
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  defaultValue={defaults.hoursPerWeek}
+                  placeholder="e.g. 20"
+                  className={input}
+                />
+                <p className="text-[10px] text-black/40 mt-1">
+                  Used for the weekly income calculator.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

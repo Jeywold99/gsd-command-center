@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "./prisma";
+import { emitNotifications } from "./realtime";
 import type { NotificationType } from "@/generated/prisma/client/enums";
 
 // In-app notification center. Other features call `notify()` to drop a row;
@@ -19,7 +20,7 @@ export type NotifyInput = {
 // break the action that triggered it, so callers can wrap in try/catch or use
 // `notifyMany` which already swallows per-user errors.
 export async function notify(input: NotifyInput) {
-  return prisma.notification.create({
+  const row = await prisma.notification.create({
     data: {
       userId: input.userId,
       type: input.type,
@@ -30,27 +31,56 @@ export async function notify(input: NotifyInput) {
       linkUrl: input.linkUrl ?? null,
     },
   });
+  await emitNotifications([
+    {
+      id: row.id,
+      userId: row.userId,
+      type: row.type,
+      title: row.title,
+      body: row.body,
+      linkUrl: row.linkUrl,
+      createdAt: row.createdAt,
+    },
+  ]);
+  return row;
 }
 
-// Notify several users at once (e.g. everyone newly assigned to a task).
-// Skips empty lists and never throws — notifications are a side effect.
+// Notify several users at once (e.g. everyone newly assigned to a task, or the
+// whole team when a project/event is created). Skips empty lists and never
+// throws — notifications are a side effect. Rows are created individually so we
+// can push each one live to its recipient's socket room.
 export async function notifyMany(
   userIds: string[],
   input: Omit<NotifyInput, "userId">,
 ) {
   if (userIds.length === 0) return;
   try {
-    await prisma.notification.createMany({
-      data: userIds.map((userId) => ({
-        userId,
-        type: input.type,
-        title: input.title,
-        body: input.body ?? null,
-        entityType: input.entityType ?? null,
-        entityId: input.entityId ?? null,
-        linkUrl: input.linkUrl ?? null,
+    const rows = await Promise.all(
+      userIds.map((userId) =>
+        prisma.notification.create({
+          data: {
+            userId,
+            type: input.type,
+            title: input.title,
+            body: input.body ?? null,
+            entityType: input.entityType ?? null,
+            entityId: input.entityId ?? null,
+            linkUrl: input.linkUrl ?? null,
+          },
+        }),
+      ),
+    );
+    await emitNotifications(
+      rows.map((row) => ({
+        id: row.id,
+        userId: row.userId,
+        type: row.type,
+        title: row.title,
+        body: row.body,
+        linkUrl: row.linkUrl,
+        createdAt: row.createdAt,
       })),
-    });
+    );
   } catch (err) {
     console.error("notifyMany failed:", err);
   }

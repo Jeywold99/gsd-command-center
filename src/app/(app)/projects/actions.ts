@@ -14,7 +14,7 @@ export async function createProject(
   _state: ClientFormState,
   formData: FormData,
 ): Promise<ClientFormState> {
-  await requireRole("OWNER", "MANAGER");
+  const session = await requireRole("OWNER", "MANAGER");
   const name = str(formData.get("name"));
   if (!name) return { error: "Project name is required." };
 
@@ -29,7 +29,28 @@ export async function createProject(
       startDate: date(formData.get("startDate")),
       dueDate: date(formData.get("dueDate")),
     },
+    include: { client: { select: { companyName: true } } },
   });
+
+  // Notify the rest of the team that a new project exists.
+  const team = await prisma.user.findMany({
+    where: { isActive: true, id: { not: session.userId } },
+    select: { id: true },
+  });
+  await notifyMany(
+    team.map((u) => u.id),
+    {
+      type: "PROJECT_CREATED",
+      title: "New project created",
+      body: project.client
+        ? `${project.client.companyName} · ${project.name}`
+        : project.name,
+      entityType: "project",
+      entityId: project.id,
+      linkUrl: `/projects/${project.id}`,
+    },
+  );
+
   revalidatePath("/projects");
   redirect(`/projects/${project.id}`);
 }
@@ -65,8 +86,9 @@ export async function updateProject(
 // ── Tasks: board interactions (called directly from the client board) ──
 
 // Returns the created task so the client board can append it optimistically.
+// By default the creator is assigned to the task they add.
 export async function createTask(projectId: string, status: string, title: string) {
-  await verifySession();
+  const session = await verifySession();
   if (!title.trim()) return null;
   const max = await prisma.task.aggregate({
     where: { projectId, status: status as never, parentId: null },
@@ -78,6 +100,8 @@ export async function createTask(projectId: string, status: string, title: strin
       projectId,
       status: status as never,
       position: (max._max.position ?? 0) + 1,
+      createdById: session.userId,
+      assignees: { create: { userId: session.userId } },
     },
     include: {
       assignees: { include: { user: { select: { id: true, name: true } } } },
@@ -307,10 +331,12 @@ export async function quickAddTask(formData: FormData) {
     },
   });
 
-  // Assign the people picked at creation (deduped; empty is fine).
-  const assigneeIds = [
+  // Assign the people picked at creation (deduped). If none were picked, the
+  // creator is assigned by default ("whoever added it, unless they change it").
+  let assigneeIds = [
     ...new Set(formData.getAll("assigneeIds").map(String).filter(Boolean)),
   ];
+  if (assigneeIds.length === 0) assigneeIds = [session.userId];
   if (assigneeIds.length) {
     await prisma.taskAssignee.createMany({
       data: assigneeIds.map((userId) => ({ taskId: task.id, userId })),

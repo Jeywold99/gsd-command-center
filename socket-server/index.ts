@@ -37,7 +37,41 @@ async function userIdFromCookie(header?: string): Promise<string | null> {
   }
 }
 
-const httpServer = createServer((_req, res) => {
+// Shared secret so the Next server process can ask us to relay a notification
+// live (project/event/task created, etc.). Reuses SESSION_SECRET — both
+// processes already share it — so no extra env config is needed.
+const INTERNAL_SECRET = process.env.SESSION_SECRET || "";
+
+const httpServer = createServer((req, res) => {
+  // Internal relay: Next persists the notification, then POSTs it here so we can
+  // push it into the recipient's personal room. Body: { events: [{ userId, notification }] }.
+  if (req.method === "POST" && req.url === "/internal/emit") {
+    if (!INTERNAL_SECRET || req.headers["x-internal-secret"] !== INTERNAL_SECRET) {
+      res.writeHead(401);
+      res.end("unauthorized");
+      return;
+    }
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      try {
+        const { events } = JSON.parse(body || "{}");
+        if (Array.isArray(events)) {
+          for (const ev of events) {
+            if (ev?.userId && ev?.notification) {
+              io.to(`user:${ev.userId}`).emit("notification", ev.notification);
+            }
+          }
+        }
+        res.writeHead(200);
+        res.end("ok");
+      } catch {
+        res.writeHead(400);
+        res.end("bad request");
+      }
+    });
+    return;
+  }
   res.writeHead(200);
   res.end("GSD chat socket server");
 });
@@ -85,46 +119,55 @@ io.on("connection", (socket) => {
           sender: msg.sender,
         });
 
-        // @mentions → in-app notifications (dedupe, never notify yourself).
-        const mentioned = [...new Set(payload.mentions ?? [])].filter(
-          (id) => id && id !== senderId,
-        );
-        if (mentioned.length > 0) {
-          try {
-            const channel = await prisma.channel.findUnique({
-              where: { id: channelId },
-              select: { name: true },
+        // Notifications:
+        //  · mentioned teammates get a stronger "mentioned you" MENTION,
+        //  · every other active teammate gets a CHANNEL_MESSAGE.
+        // Never notify the sender. Each row is persisted, then pushed live to
+        // that user's room so the bell updates instantly (no navigation needed).
+        try {
+          const mentioned = new Set(
+            (payload.mentions ?? []).filter((id) => id && id !== senderId),
+          );
+          const channel = await prisma.channel.findUnique({
+            where: { id: channelId },
+            select: { name: true },
+          });
+          const channelName = channel?.name ?? "a channel";
+          const body = content.slice(0, 140);
+          const linkUrl = `/chat?channel=${channelId}`;
+
+          const recipients = await prisma.user.findMany({
+            where: { isActive: true, id: { not: senderId } },
+            select: { id: true },
+          });
+
+          for (const { id: userId } of recipients) {
+            const isMention = mentioned.has(userId);
+            const notif = await prisma.notification.create({
+              data: {
+                userId,
+                type: isMention ? "MENTION" : "CHANNEL_MESSAGE",
+                title: isMention
+                  ? `${msg.sender.name} mentioned you in #${channelName}`
+                  : `${msg.sender.name} posted in #${channelName}`,
+                body,
+                entityType: "channel",
+                entityId: channelId,
+                linkUrl,
+              },
             });
-            const title = `${msg.sender.name} mentioned you in #${channel?.name ?? "a channel"}`;
-            const body = content.slice(0, 140);
-            const linkUrl = `/chat?channel=${channelId}`;
-            // Persist one row per user, then push it live to that user's room so
-            // the bell updates instantly (no navigation needed).
-            for (const userId of mentioned) {
-              const notif = await prisma.notification.create({
-                data: {
-                  userId,
-                  type: "MENTION",
-                  title,
-                  body,
-                  entityType: "channel",
-                  entityId: channelId,
-                  linkUrl,
-                },
-              });
-              io.to(`user:${userId}`).emit("notification", {
-                id: notif.id,
-                type: notif.type,
-                title: notif.title,
-                body: notif.body,
-                linkUrl: notif.linkUrl,
-                isRead: false,
-                createdAt: notif.createdAt,
-              });
-            }
-          } catch (err) {
-            console.error("mention notify failed", err);
+            io.to(`user:${userId}`).emit("notification", {
+              id: notif.id,
+              type: notif.type,
+              title: notif.title,
+              body: notif.body,
+              linkUrl: notif.linkUrl,
+              isRead: false,
+              createdAt: notif.createdAt,
+            });
           }
+        } catch (err) {
+          console.error("chat notify failed", err);
         }
       } catch (err) {
         console.error("message persist failed", err);

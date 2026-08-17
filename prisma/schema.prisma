@@ -52,6 +52,13 @@ enum BillingType {
   FIXED  // retainer: track required hours/week
 }
 
+// How often a client pays us — drives the income calculator's period totals.
+enum PayFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 enum ProjectStatus {
   PLANNING
   ACTIVE
@@ -109,6 +116,8 @@ enum NotificationType {
   TASK_DUE_SOON
   MENTION
   CHANNEL_MESSAGE
+  PROJECT_CREATED
+  EVENT_CREATED
   SYSTEM
 }
 
@@ -199,6 +208,10 @@ model Client {
   serviceType   String? // e.g. 'Fractional COO', 'Marketing', 'Dev'
   // Client billing currency; the hourly rate itself lives in BillingRate (dated history).
   currency      String         @default("USD")
+  // IANA time zone (e.g. "America/New_York") for the client's local clock.
+  timezone      String?
+  // How often we invoice / get paid by this client.
+  payFrequency  PayFrequency?
   // Hex color used to color-code this client across the shared calendar.
   colorHex      String?
   website       String?

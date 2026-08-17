@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus, Building2 } from "lucide-react";
 import { listClients, listLeads } from "@/lib/crm";
 import { StatusBadge, StageLabel, PIPELINE_STAGES, fmtDate } from "./_components/badges";
+import ClientClock from "./_components/client-clock";
 
 function rateOf(
   billingRates: { type?: string; rate: unknown; hoursPerWeek?: unknown }[],
@@ -106,6 +107,7 @@ export default async function CrmPage({
                   <th className="px-5 py-3">Service</th>
                   <th className="px-5 py-3">Primary Contact</th>
                   <th className="px-5 py-3">Rate</th>
+                  <th className="px-5 py-3">Local Time</th>
                   <th className="px-5 py-3">Projects</th>
                   <th className="px-5 py-3">Renewal</th>
                 </tr>
@@ -129,6 +131,9 @@ export default async function CrmPage({
                     <td className="px-5 py-3 text-black/60">{c.serviceType ?? "—"}</td>
                     <td className="px-5 py-3 text-black/60">{c.contacts[0]?.name ?? "—"}</td>
                     <td className="px-5 py-3 text-black/60">{rateOf(c.billingRates)}</td>
+                    <td className="px-5 py-3 text-sm">
+                      <ClientClock timezone={c.timezone} />
+                    </td>
                     <td className="px-5 py-3 text-black/60">{c._count.projects}</td>
                     <td className="px-5 py-3 text-black/60">{fmtDate(c.renewalDate)}</td>
                   </tr>

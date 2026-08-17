@@ -47,6 +47,22 @@ export async function stopTimer() {
   revalidatePath("/timesheet");
 }
 
+// Global "clock in" from the top nav — tracks timed work with no project/task
+// attached. Reuses the one-running-timer-per-user rule; stop with stopTimer.
+export async function clockIn() {
+  const session = await verifySession();
+  await stopRunning(session.userId);
+  await prisma.timeEntry.create({
+    data: {
+      userId: session.userId,
+      startedAt: new Date(),
+      source: "TIMER",
+    },
+  });
+  revalidatePath("/time");
+  revalidatePath("/timesheet");
+}
+
 export async function addManualEntry(formData: FormData) {
   const session = await verifySession();
   const projectId = (formData.get("projectId") as string) || null;

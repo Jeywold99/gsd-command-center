@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { listEvents, listTaskDue } from "@/lib/calendar";
 import { listActiveClients } from "@/lib/projects";
-import { createEvent, deleteEvent } from "./actions";
+import { createEvent } from "./actions";
+import EventList from "./_components/event-list";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -95,6 +96,19 @@ export default async function CalendarPage({
               <label className={label}>End</label>
               <input type="datetime-local" name="end" className={input} />
             </div>
+            <div>
+              <label className={label}>Meeting link</label>
+              <input type="url" name="meetingUrl" placeholder="https://meet…" className={input} />
+            </div>
+            <div>
+              <label className={label}>Description</label>
+              <textarea
+                name="description"
+                rows={3}
+                placeholder="Agenda, notes, context…"
+                className={input}
+              />
+            </div>
             <label className="flex items-center gap-2 text-xs text-ink/60">
               <input type="checkbox" name="allDay" className="accent-brand w-4 h-4" /> All day
             </label>
@@ -184,42 +198,7 @@ export default async function CalendarPage({
       {/* Agenda */}
       <div>
         <h3 className="font-display text-2xl tracking-wide text-ink mb-3">Events this month</h3>
-        {events.length === 0 ? (
-          <div className="bg-white border border-dashed border-black/15 rounded-2xl p-10 text-center">
-            <p className="text-black/50">No events scheduled. Add one with “New Event”.</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-black/[0.07] divide-y divide-black/[0.05]">
-            {events.map((e) => (
-              <div key={e.id} className="flex items-center gap-3 px-5 py-3">
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ background: e.client?.colorHex ?? "#ff5c00" }}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink truncate">{e.title}</p>
-                  <p className="text-xs text-black/45">
-                    {new Date(e.startAt).toLocaleString(undefined, {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                    {e.client ? ` · ${e.client.companyName}` : ""}
-                    {e.type === "CONTENT_PUBLISH" ? " · content" : ""}
-                  </p>
-                </div>
-                <form action={deleteEvent}>
-                  <input type="hidden" name="id" value={e.id} />
-                  <button type="submit" className="p-1.5 rounded-lg text-ink/40 hover:text-red-600 hover:bg-red-50 transition" title="Delete">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
-        )}
+        <EventList events={events} clients={clients} />
       </div>
     </div>
   );
