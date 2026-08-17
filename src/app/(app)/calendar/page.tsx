@@ -4,6 +4,7 @@ import { listEvents, listTaskDue } from "@/lib/calendar";
 import { listActiveClients } from "@/lib/projects";
 import { createEvent } from "./actions";
 import EventList from "./_components/event-list";
+import EventItem from "./_components/event-item";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -137,20 +138,11 @@ export default async function CalendarPage({
             const isToday = sameDay(day, now);
             const dayEvents = events.filter((e) => sameDay(new Date(e.startAt), day));
             const dayTasks = taskDue.filter((t) => t.dueDate && sameDay(new Date(t.dueDate), day));
-            const items = [
-              ...dayEvents.map((e) => ({
-                key: `e-${e.id}`,
-                title: e.title,
-                color: e.client?.colorHex ?? "#ff5c00",
-                href: null as string | null,
-              })),
-              ...dayTasks.map((t) => ({
-                key: `t-${t.id}`,
-                title: `⚑ ${t.title}`,
-                color: t.project?.client?.colorHex ?? "#94a3b8",
-                href: t.projectId ? `/projects/${t.projectId}/tasks/${t.id}` : null,
-              })),
-            ];
+            const total = dayEvents.length + dayTasks.length;
+            // Events first (clickable → details/edit modal), then task-due flags;
+            // capped at 3 per cell.
+            const shownEvents = dayEvents.slice(0, 3);
+            const shownTasks = dayTasks.slice(0, Math.max(0, 3 - shownEvents.length));
             return (
               <div
                 key={i}
@@ -168,25 +160,32 @@ export default async function CalendarPage({
                   </span>
                 </div>
                 <div className="mt-0.5 space-y-0.5">
-                  {items.slice(0, 3).map((it) => {
+                  {shownEvents.map((e) => (
+                    <EventItem key={`e-${e.id}`} event={e} clients={clients} variant="pill" />
+                  ))}
+                  {shownTasks.map((t) => {
+                    const color = t.project?.client?.colorHex ?? "#94a3b8";
+                    const href = t.projectId
+                      ? `/projects/${t.projectId}/tasks/${t.id}`
+                      : null;
                     const pill = (
                       <div
                         className="flex items-center gap-1 text-[11px] text-ink/80 rounded px-1 py-0.5 truncate hover:bg-cream"
-                        style={{ borderLeft: `3px solid ${it.color}` }}
+                        style={{ borderLeft: `3px solid ${color}` }}
                       >
-                        <span className="truncate">{it.title}</span>
+                        <span className="truncate">⚑ {t.title}</span>
                       </div>
                     );
-                    return it.href ? (
-                      <Link key={it.key} href={it.href} className="block">
+                    return href ? (
+                      <Link key={`t-${t.id}`} href={href} className="block">
                         {pill}
                       </Link>
                     ) : (
-                      <div key={it.key}>{pill}</div>
+                      <div key={`t-${t.id}`}>{pill}</div>
                     );
                   })}
-                  {items.length > 3 && (
-                    <div className="text-[10px] text-black/35 px-1">+{items.length - 3} more</div>
+                  {total > 3 && (
+                    <div className="text-[10px] text-black/35 px-1">+{total - 3} more</div>
                   )}
                 </div>
               </div>
