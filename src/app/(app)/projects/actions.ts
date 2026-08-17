@@ -166,17 +166,26 @@ export async function updateTask(formData: FormData) {
       completedAt: str(formData.get("status")) === "DONE" ? new Date() : null,
     },
   });
+  // Preserve where the user came from (global Tasks board vs project board).
+  const fromTasks = str(formData.get("from")) === "tasks";
   if (projectId) revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/tasks/${id}`);
-  redirect(`/projects/${projectId}/tasks/${id}`);
+  redirect(`/projects/${projectId}/tasks/${id}${fromTasks ? "?from=tasks" : ""}`);
 }
 
 export async function deleteTask(formData: FormData) {
   await verifySession();
   const id = str(formData.get("id"));
   const projectId = str(formData.get("projectId"));
+  const fromTasks = str(formData.get("from")) === "tasks";
   if (!id) return;
   await prisma.task.delete({ where: { id } });
+  // Return to wherever the task was opened from.
+  if (fromTasks) {
+    revalidatePath("/tasks");
+    if (projectId) revalidatePath(`/projects/${projectId}`);
+    redirect("/tasks");
+  }
   if (projectId) {
     revalidatePath(`/projects/${projectId}`);
     redirect(`/projects/${projectId}`);

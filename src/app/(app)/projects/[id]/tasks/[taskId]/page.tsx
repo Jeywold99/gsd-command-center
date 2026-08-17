@@ -21,12 +21,21 @@ const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
 export default async function TaskPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; taskId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id, taskId } = await params;
+  const { from } = await searchParams;
   const [task, users] = await Promise.all([getTask(taskId), listUsers()]);
   if (!task) notFound();
+
+  // Where the user came from decides where "Back" returns them: the global
+  // Tasks board (?from=tasks) vs this task's project board (default).
+  const cameFromTasks = from === "tasks";
+  const backHref = cameFromTasks ? "/tasks" : `/projects/${id}`;
+  const backLabel = cameFromTasks ? "Back to tasks" : "Back to board";
 
   const dueInput = task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "";
   const startInput = task.startDate ? new Date(task.startDate).toISOString().slice(0, 10) : "";
@@ -34,11 +43,11 @@ export default async function TaskPage({
   return (
     <div className="space-y-6">
       <Link
-        href={`/projects/${id}`}
+        href={backHref}
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to board
+        {backLabel}
       </Link>
 
       {/* The task-edit form is DOM-empty here; its fields live in both columns
@@ -48,6 +57,7 @@ export default async function TaskPage({
       <form id="task-edit" action={updateTask} className="hidden">
         <input type="hidden" name="id" value={task.id} />
         <input type="hidden" name="projectId" value={id} />
+        <input type="hidden" name="from" value={cameFromTasks ? "tasks" : ""} />
       </form>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -221,6 +231,7 @@ export default async function TaskPage({
             <form action={deleteTask}>
               <input type="hidden" name="id" value={task.id} />
               <input type="hidden" name="projectId" value={id} />
+              <input type="hidden" name="from" value={cameFromTasks ? "tasks" : ""} />
               <button
                 type="submit"
                 className="inline-flex items-center gap-2 text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition"

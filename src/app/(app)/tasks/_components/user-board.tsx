@@ -99,7 +99,7 @@ function TaskCard({ task }: { task: BoardTask }) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      onClick={() => task.project && router.push(`/projects/${task.project.id}/tasks/${task.id}`)}
+      onClick={() => task.project && router.push(`/projects/${task.project.id}/tasks/${task.id}?from=tasks`)}
       style={{ opacity: isDragging ? 0.4 : 1 }}
       className="bg-white rounded-xl border border-black/10 p-3 shadow-sm transition-colors hover:border-brand/40 cursor-grab active:cursor-grabbing"
     >

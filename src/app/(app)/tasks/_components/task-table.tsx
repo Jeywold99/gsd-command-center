@@ -38,7 +38,7 @@ export default function TaskTable({ tasks }: { tasks: Row[] }) {
           </thead>
           <tbody className="divide-y divide-black/[0.05]">
             {tasks.map((t) => {
-              const href = t.project ? `/projects/${t.project.id}/tasks/${t.id}` : null;
+              const href = t.project ? `/projects/${t.project.id}/tasks/${t.id}?from=tasks` : null;
               const p = PRIORITY[t.priority] ?? PRIORITY.MEDIUM;
               return (
                 <tr key={t.id} className="hover:bg-black/[0.02] transition-colors">
