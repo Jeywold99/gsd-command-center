@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed-owner.ts",
+    "set-owner": "tsx scripts/set-owner.ts",
     "socket": "tsx socket-server/index.ts",
     "reminders": "tsx reminders-worker/index.ts"
   },
