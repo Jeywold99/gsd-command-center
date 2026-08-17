@@ -233,6 +233,65 @@ export async function setAssignees(taskId: string, projectId: string, userIds: s
   revalidatePath(`/projects/${projectId}`);
 }
 
+// Bulk-edit several tasks at once from the /tasks table view. Every field is
+// optional — only the ones the user set are applied. `assigneeId` REPLACES each
+// task's assignee set with that one person. Moving to a project also moves the
+// task's client (client is derived from the project).
+export async function bulkUpdateTasks(
+  taskIds: string[],
+  changes: {
+    priority?: string;
+    assigneeId?: string;
+    dueDate?: string;
+    clearDueDate?: boolean;
+    projectId?: string;
+  },
+) {
+  const session = await verifySession();
+  const ids = [...new Set(taskIds.filter(Boolean))];
+  if (ids.length === 0) return;
+
+  // Scalar fields via a single updateMany.
+  const data: Record<string, unknown> = {};
+  if (changes.priority) data.priority = changes.priority;
+  if (changes.projectId) data.projectId = changes.projectId;
+  if (changes.clearDueDate) {
+    data.dueDate = null;
+  } else if (changes.dueDate) {
+    const d = new Date(changes.dueDate);
+    if (!isNaN(d.getTime())) data.dueDate = d;
+  }
+  if (Object.keys(data).length > 0) {
+    await prisma.task.updateMany({
+      where: { id: { in: ids } },
+      data: data as never,
+    });
+  }
+
+  // Assignee is a relation — replace the set for every selected task.
+  if (changes.assigneeId) {
+    const assigneeId = changes.assigneeId;
+    await prisma.$transaction([
+      prisma.taskAssignee.deleteMany({ where: { taskId: { in: ids } } }),
+      prisma.taskAssignee.createMany({
+        data: ids.map((taskId) => ({ taskId, userId: assigneeId })),
+        skipDuplicates: true,
+      }),
+    ]);
+    // One summary notification (skip if you assigned yourself).
+    if (assigneeId !== session.userId) {
+      await notifyMany([assigneeId], {
+        type: "TASK_ASSIGNED",
+        title: `You were assigned ${ids.length} task${ids.length > 1 ? "s" : ""}`,
+        entityType: "task",
+        linkUrl: "/tasks",
+      });
+    }
+  }
+
+  revalidatePath("/tasks");
+}
+
 // Returns the created subtask so the client list can append it.
 export async function createSubtask(parentId: string, projectId: string, title: string) {
   await verifySession();

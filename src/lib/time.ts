@@ -31,7 +31,11 @@ export async function listProjectOptions() {
   return prisma.project.findMany({
     where: { status: { not: "ARCHIVED" } },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, client: { select: { companyName: true } } },
+    select: {
+      id: true,
+      name: true,
+      client: { select: { id: true, companyName: true } },
+    },
   });
 }
 

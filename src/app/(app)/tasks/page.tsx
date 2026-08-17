@@ -195,7 +195,7 @@ export default async function TasksPage({
           <p className="text-black/50">{emptyMsg}</p>
         </div>
       ) : view === "table" ? (
-        <TaskTable tasks={filtered} />
+        <TaskTable tasks={filtered} users={users} projects={projects} />
       ) : (
         <UserBoard key={scope} tasks={filtered} />
       )}
