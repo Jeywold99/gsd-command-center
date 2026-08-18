@@ -26,6 +26,14 @@ function parseBilling(formData: FormData): BillingInput | null {
   if (!rateOk && !hoursOk) return null;
   return { type, rate: rateOk ? r : null, hoursPerWeek: hoursOk ? h : null };
 }
+// Monthly payment day (1–31) or null.
+function payDom(formData: FormData): number | null {
+  const v = str(formData.get("payDayOfMonth"));
+  if (!v) return null;
+  const n = parseInt(v, 10);
+  return isNaN(n) || n < 1 || n > 31 ? null : n;
+}
+
 // Compare a stored value (Decimal|null) with a form value (string|null) numerically.
 function sameNum(a: unknown, b: string | null): boolean {
   if (a == null && b == null) return true;
@@ -64,6 +72,7 @@ export async function createClient(
         colorHex: str(formData.get("colorHex")),
         timezone: str(formData.get("timezone")),
         payFrequency: (str(formData.get("payFrequency")) as never) ?? null,
+        payDayOfMonth: payDom(formData),
         startDate: date(formData.get("startDate")),
         renewalDate: date(formData.get("renewalDate")),
       },
@@ -121,6 +130,7 @@ export async function updateClient(
       colorHex: str(formData.get("colorHex")),
       timezone: str(formData.get("timezone")),
       payFrequency: (str(formData.get("payFrequency")) as never) ?? null,
+      payDayOfMonth: payDom(formData),
       startDate: date(formData.get("startDate")),
       renewalDate: date(formData.get("renewalDate")),
     },

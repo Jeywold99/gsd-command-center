@@ -212,6 +212,9 @@ model Client {
   timezone      String?
   // How often we invoice / get paid by this client.
   payFrequency  PayFrequency?
+  // Day of month (1–31) a MONTHLY-paying client pays on. Null for weekly/biweekly
+  // (those always pay on Fridays). Clamped to the month's length when applied.
+  payDayOfMonth Int?
   // Hex color used to color-code this client across the shared calendar.
   colorHex      String?
   website       String?

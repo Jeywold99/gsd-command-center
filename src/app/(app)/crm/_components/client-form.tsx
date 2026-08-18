@@ -24,6 +24,7 @@ type Defaults = {
   hoursPerWeek?: string;
   timezone?: string;
   payFrequency?: string;
+  payDayOfMonth?: string;
 };
 
 export default function ClientForm({
@@ -43,6 +44,7 @@ export default function ClientForm({
   const [billingType, setBillingType] = useState<"HOURLY" | "FIXED">(
     defaults.billingType === "FIXED" ? "FIXED" : "HOURLY",
   );
+  const [payFrequency, setPayFrequency] = useState(defaults.payFrequency ?? "");
 
   return (
     <form action={formAction} className="space-y-5 max-w-2xl">
@@ -156,14 +158,33 @@ export default function ClientForm({
           <select
             name="payFrequency"
             className={input}
-            defaultValue={defaults.payFrequency ?? ""}
+            value={payFrequency}
+            onChange={(e) => setPayFrequency(e.target.value)}
           >
             <option value="">—</option>
-            <option value="WEEKLY">Weekly</option>
-            <option value="BIWEEKLY">Bi-weekly</option>
+            <option value="WEEKLY">Weekly (Fridays)</option>
+            <option value="BIWEEKLY">Bi-weekly (Fridays)</option>
             <option value="MONTHLY">Once a month</option>
           </select>
         </div>
+
+        {payFrequency === "MONTHLY" && (
+          <div>
+            <label className={label}>Payment Day (of month)</label>
+            <input
+              name="payDayOfMonth"
+              type="number"
+              min="1"
+              max="31"
+              defaultValue={defaults.payDayOfMonth}
+              placeholder="e.g. 15"
+              className={input}
+            />
+            <p className="text-[10px] text-black/40 mt-1">
+              Day the monthly payment lands (clamped to month length).
+            </p>
+          </div>
+        )}
 
         <div>
           <label className={label}>Calendar Color</label>

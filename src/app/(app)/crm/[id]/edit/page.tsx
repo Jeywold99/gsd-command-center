@@ -50,6 +50,7 @@ export default async function EditClientPage({
           colorHex: client.colorHex ?? "#FF5C00",
           timezone: client.timezone ?? "",
           payFrequency: client.payFrequency ?? "",
+          payDayOfMonth: client.payDayOfMonth != null ? String(client.payDayOfMonth) : "",
           startDate: toDateInput(client.startDate),
           renewalDate: toDateInput(client.renewalDate),
           billingType: rate?.type ?? "HOURLY",

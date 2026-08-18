@@ -8,7 +8,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
-import { getDashboardData, getWeeklyIncome } from "@/lib/dashboard";
+import { getDashboardData } from "@/lib/dashboard";
+import { getThisWeekIncome } from "@/lib/income";
 import { fmtDate, initials } from "./projects/_components/task-badges";
 import WorldClocks from "./_components/world-clocks";
 
@@ -19,29 +20,18 @@ const money = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-function incomeBasis(r: {
-  billingType: "HOURLY" | "FIXED" | null;
-  rate: number | null;
-  hoursPerWeek: number | null;
-  payFrequency: string | null;
-}) {
-  if (r.billingType === "HOURLY") {
-    if (r.rate != null && r.hoursPerWeek != null)
-      return `$${r.rate}/hr × ${r.hoursPerWeek}h`;
-    if (r.rate != null) return `$${r.rate}/hr · set hours/wk`;
-    return "Set an hourly rate";
-  }
-  if (r.billingType === "FIXED") {
-    const freq =
-      r.payFrequency === "MONTHLY"
-        ? "monthly"
-        : r.payFrequency === "BIWEEKLY"
-          ? "bi-weekly"
-          : "weekly";
-    return r.rate != null ? `Fixed · ${freq}` : "Set a retainer";
-  }
-  return "No billing set";
-}
+const FREQ_LABEL: Record<string, string> = {
+  WEEKLY: "Weekly",
+  BIWEEKLY: "Bi-weekly",
+  MONTHLY: "Monthly",
+};
+
+const payDateFmt = (d: Date | string) =>
+  new Date(d).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 
 function StatTile({
   label,
@@ -92,7 +82,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser();
   const [d, income] = await Promise.all([
     getDashboardData(user?.id ?? ""),
-    getWeeklyIncome(),
+    getThisWeekIncome(),
   ]);
 
   return (
@@ -125,19 +115,26 @@ export default async function DashboardPage() {
       {/* Weekly income + client clocks */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className="lg:col-span-2 bg-white rounded-2xl border border-black/[0.07] p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display text-2xl tracking-wide text-ink">Weekly Income</h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-display text-2xl tracking-wide text-ink">
+              This Week&apos;s Income
+            </h3>
             <div className="text-right">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/45">
-                Projected / week
+                Landing this week
               </p>
               <p className="font-display text-3xl tracking-wide text-brand leading-none">
                 {money(income.total)}
               </p>
             </div>
           </div>
+          <p className="text-xs text-black/40 mb-4">
+            {payDateFmt(income.weekStart)} – {payDateFmt(income.weekEnd)}
+          </p>
           {income.rows.length === 0 ? (
-            <p className="text-sm text-black/40">No active clients yet.</p>
+            <p className="text-sm text-black/40">
+              No client payments scheduled this week.
+            </p>
           ) : (
             <ul className="divide-y divide-black/[0.05]">
               {income.rows.map((r) => (
@@ -153,10 +150,15 @@ export default async function DashboardPage() {
                     <span className="text-sm font-semibold text-ink block truncate">
                       {r.companyName}
                     </span>
-                    <span className="text-xs text-black/40">{incomeBasis(r)}</span>
+                    <span className="text-xs text-black/40">
+                      {payDateFmt(r.when)} · {FREQ_LABEL[r.frequency ?? ""] ?? "—"}
+                      {r.prorated && (
+                        <span className="ml-1 text-amber-600 font-semibold">· prorated</span>
+                      )}
+                    </span>
                   </Link>
                   <span className="text-sm font-bold text-ink tabular-nums shrink-0">
-                    {r.weekly != null ? money(r.weekly) : "—"}
+                    {money(r.amount)}
                   </span>
                 </li>
               ))}
