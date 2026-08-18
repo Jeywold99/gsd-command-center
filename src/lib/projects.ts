@@ -1,11 +1,28 @@
 import "server-only";
 import { prisma } from "./prisma";
 
-export async function listProjects() {
+// The Projects section. By default it shows the working set and hides the
+// "inactive" ones — ARCHIVED projects and projects whose client has CHURNED.
+// Pass showInactive=true for the hidden Archived/Churned view.
+export async function listProjects(showInactive = false) {
   return prisma.project.findMany({
+    where: showInactive
+      ? {
+          OR: [
+            { status: "ARCHIVED" },
+            { client: { is: { status: "CHURNED" } } },
+          ],
+        }
+      : {
+          status: { not: "ARCHIVED" },
+          OR: [
+            { clientId: null },
+            { client: { status: { not: "CHURNED" } } },
+          ],
+        },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: {
-      client: { select: { companyName: true, colorHex: true } },
+      client: { select: { companyName: true, colorHex: true, status: true } },
       _count: { select: { tasks: true, milestones: true } },
     },
   });

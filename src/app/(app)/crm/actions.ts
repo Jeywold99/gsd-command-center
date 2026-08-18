@@ -167,6 +167,9 @@ export async function updateClientStatus(formData: FormData) {
   await prisma.client.update({ where: { id }, data: { status: status as never } });
   revalidatePath(`/crm/${id}`);
   revalidatePath("/crm");
+  // Churn/reactivate hides or restores this client's projects + dashboard tiles.
+  revalidatePath("/projects");
+  revalidatePath("/");
 }
 
 // ── move a lead through the pipeline ──
@@ -199,6 +202,8 @@ export async function convertToClient(formData: FormData) {
   });
   revalidatePath(`/crm/${id}`);
   revalidatePath("/crm");
+  revalidatePath("/projects");
+  revalidatePath("/");
 }
 
 // ── contacts ──

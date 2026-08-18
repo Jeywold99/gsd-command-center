@@ -15,8 +15,17 @@ export default async function EditProjectPage({
 }) {
   await requireRole("OWNER", "MANAGER");
   const { id } = await params;
-  const [project, clients] = await Promise.all([getProject(id), listActiveClients()]);
+  const [project, activeClients] = await Promise.all([getProject(id), listActiveClients()]);
   if (!project) notFound();
+
+  // listActiveClients excludes churned/lead clients, so a project owned by a
+  // churned client would lose its option and get silently un-linked on save.
+  // Keep the current client selectable regardless of its status.
+  const cur = project.client;
+  const clients =
+    cur && !activeClients.some((c) => c.id === cur.id)
+      ? [...activeClients, { id: cur.id, companyName: cur.companyName }]
+      : activeClients;
 
   return (
     <div className="space-y-6">

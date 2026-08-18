@@ -16,7 +16,12 @@ export async function getDashboardData(userId: string) {
   ] = await Promise.all([
     prisma.client.count({ where: { status: "ACTIVE" } }),
     prisma.client.count({ where: { status: "LEAD" } }),
-    prisma.project.count({ where: { status: "ACTIVE" } }),
+    prisma.project.count({
+      where: {
+        status: "ACTIVE",
+        OR: [{ clientId: null }, { client: { status: { not: "CHURNED" } } }],
+      },
+    }),
     prisma.task.count({
       where: {
         parentId: null,
@@ -49,7 +54,10 @@ export async function getDashboardData(userId: string) {
       },
     }),
     prisma.project.findMany({
-      where: { status: "ACTIVE" },
+      where: {
+        status: "ACTIVE",
+        OR: [{ clientId: null }, { client: { status: { not: "CHURNED" } } }],
+      },
       orderBy: { updatedAt: "desc" },
       take: 6,
       include: {
