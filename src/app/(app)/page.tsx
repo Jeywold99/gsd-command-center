@@ -167,9 +167,6 @@ export default async function DashboardPage() {
         <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
           <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Client Clocks</h3>
           <WorldClocks />
-          <p className="mt-3 text-[11px] text-black/40">
-            Live local time in the zones we work across.
-          </p>
         </section>
       </div>
 
