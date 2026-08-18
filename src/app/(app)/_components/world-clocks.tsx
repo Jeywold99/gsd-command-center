@@ -148,8 +148,8 @@ export default function WorldClocks() {
           >
             <div className="min-w-0">
               <p
-                className={`text-[10px] font-bold uppercase tracking-wide ${
-                  z.home ? "text-brand" : "text-ink/45"
+                className={`text-sm font-extrabold uppercase tracking-wide ${
+                  z.home ? "text-brand" : "text-ink"
                 }`}
               >
                 {z.short}
