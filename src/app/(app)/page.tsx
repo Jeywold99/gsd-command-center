@@ -136,7 +136,7 @@ export default async function DashboardPage() {
               No client payments scheduled this week.
             </p>
           ) : (
-            <ul className="divide-y divide-black/[0.05]">
+            <ul className="divide-y divide-black/[0.05] max-h-64 overflow-y-auto pr-1">
               {income.rows.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 py-2.5">
                   <span
