@@ -12,6 +12,7 @@ import {
   CalendarDays,
   MessageSquare,
   FolderArchive,
+  KeyRound,
   Timer,
   CalendarClock,
   Settings,
@@ -59,6 +60,7 @@ const NAV: NavGroup[] = [
     section: "Operations",
     items: [
       { href: "/vault", label: "Document Vault", icon: FolderArchive },
+      { href: "/passwords", label: "Password Vault", icon: KeyRound },
       { href: "/time", label: "Time Tracker", icon: Timer },
       { href: "/timesheet", label: "Timesheet", icon: CalendarClock },
     ],
