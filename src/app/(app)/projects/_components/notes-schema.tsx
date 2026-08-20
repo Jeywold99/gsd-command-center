@@ -11,7 +11,7 @@ import {
   type DefaultReactSuggestionItem,
 } from "@blocknote/react";
 import type { BlockNoteEditor } from "@blocknote/core";
-import { Globe, Link2, Pencil, ExternalLink, Check, X } from "lucide-react";
+import { Globe, Link2, Pencil, ExternalLink, X } from "lucide-react";
 
 // Our uploaded URLs carry no file extension (`/api/files/<id>?inline=1`), so we
 // detect type from the original filename (BlockNote stores it in `name`).
@@ -196,7 +196,10 @@ const embedBlock = createReactBlockSpec(
     content: "none",
   },
   {
-    render: (props) => {
+    // Named (capitalized) function so eslint's react-hooks rule recognizes
+    // this as a component — it calls useState, and "render:" as a bare
+    // property name doesn't read as one.
+    render: function EmbedBlockRender(props) {
       const { url } = props.block.props;
       const [editing, setEditing] = useState(!url);
 
@@ -268,7 +271,7 @@ const linkBlock = createReactBlockSpec(
     content: "none",
   },
   {
-    render: (props) => {
+    render: function LinkBlockRender(props) {
       const { url, title } = props.block.props;
       const [editing, setEditing] = useState(!url);
 
