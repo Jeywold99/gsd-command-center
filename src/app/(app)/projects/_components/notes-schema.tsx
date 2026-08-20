@@ -263,15 +263,19 @@ const embedBlock = createReactBlockSpec(
 )();
 
 // ── Link block: a plain clickable link card (no iframe) ─────────────────────
+// Named "bookmark" internally — BlockNote's built-in inline hyperlink mark is
+// already registered under the type name "link", and ProseMirror doesn't allow
+// a node (block) and a mark to share one name in the same schema (it throws
+// "link can not be both a node and a mark" and crashes the whole editor).
 
-const linkBlock = createReactBlockSpec(
+const bookmarkBlock = createReactBlockSpec(
   {
-    type: "link",
+    type: "bookmark",
     propSchema: { url: { default: "" }, title: { default: "" } },
     content: "none",
   },
   {
-    render: function LinkBlockRender(props) {
+    render: function BookmarkBlockRender(props) {
       const { url, title } = props.block.props;
       const [editing, setEditing] = useState(!url);
 
@@ -323,9 +327,9 @@ const linkBlock = createReactBlockSpec(
 )();
 
 // Schema = all default blocks, with our enhanced `file` block swapped in and
-// `embed` / `link` added.
+// `embed` / `bookmark` added.
 export const notesSchema = BlockNoteSchema.create({
-  blockSpecs: { ...defaultBlockSpecs, file: fileBlock, embed: embedBlock, link: linkBlock },
+  blockSpecs: { ...defaultBlockSpecs, file: fileBlock, embed: embedBlock, bookmark: bookmarkBlock },
 });
 
 // ── Slash menu ("/") items ────────────────────────────────────────────────
@@ -361,7 +365,7 @@ export function getNotesSlashMenuItems(
       group: "Media",
       icon: <Link2 className="w-[18px] h-[18px]" />,
       onItemClick: () => {
-        insertOrUpdateBlockForSlashMenu(editor, { type: "link" } as never);
+        insertOrUpdateBlockForSlashMenu(editor, { type: "bookmark" } as never);
       },
     },
   ];
