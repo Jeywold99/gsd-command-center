@@ -24,6 +24,7 @@ import {
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "./notification-bell";
 import ClockInButton from "./clock-in-button";
+import SavedToast from "./saved-toast";
 
 type Notification = {
   id: string;
@@ -190,6 +191,7 @@ export default function AppShell({
 
   return (
     <div className="flex min-h-screen bg-cream font-body">
+      <SavedToast />
       {/* ── Desktop sidebar ── */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col bg-midnight text-white fixed inset-y-0 left-0 z-30">
         {SidebarInner}

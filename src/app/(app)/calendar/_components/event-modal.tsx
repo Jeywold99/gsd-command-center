@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Trash2, Pencil, Video, X, Calendar, Building2 } from "lucide-react";
 import { updateEvent, deleteEvent } from "../actions";
+import { announceSaved } from "../../_components/saved-toast";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -79,6 +80,15 @@ export default function EventModal({
   onClose: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [saving, startSaving] = useTransition();
+
+  function saveEvent(formData: FormData) {
+    startSaving(async () => {
+      await updateEvent(formData);
+      announceSaved("Event saved");
+      onClose();
+    });
+  }
 
   // Close on Escape.
   useEffect(() => {
@@ -123,11 +133,7 @@ export default function EventModal({
 
         {editing ? (
           /* ── Edit form ── */
-          <form
-            action={updateEvent}
-            onSubmit={onClose}
-            className="px-6 py-5 space-y-3"
-          >
+          <form action={saveEvent} className="px-6 py-5 space-y-3">
             <input type="hidden" name="id" value={event.id} />
             <div>
               <label className={label}>Title *</label>
@@ -205,9 +211,10 @@ export default function EventModal({
             <div className="flex items-center gap-2 pt-1">
               <button
                 type="submit"
+                disabled={saving}
                 className="bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide px-4 py-2 rounded-full transition-colors"
               >
-                Save changes
+                {saving ? "Saving…" : "Save changes"}
               </button>
               <button
                 type="button"

@@ -165,7 +165,7 @@ export async function updateClient(
 
   revalidatePath(`/crm/${id}`);
   revalidatePath("/crm");
-  redirect(`/crm/${id}`);
+  redirect(`/crm/${id}?saved=1`);
 }
 
 // ── status (Active / Paused / Churned) ──
@@ -180,6 +180,7 @@ export async function updateClientStatus(formData: FormData) {
   // Churn/reactivate hides or restores this client's projects + dashboard tiles.
   revalidatePath("/projects");
   revalidatePath("/");
+  redirect(`/crm/${id}?saved=1`);
 }
 
 // ── move a lead through the pipeline ──
@@ -194,6 +195,7 @@ export async function updateLeadStage(formData: FormData) {
   });
   revalidatePath(`/crm/${id}`);
   revalidatePath("/crm");
+  redirect(`/crm/${id}?saved=1`);
 }
 
 // ── convert a lead into an active client ──

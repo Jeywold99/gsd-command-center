@@ -80,7 +80,7 @@ export async function updateProject(
   });
   revalidatePath(`/projects/${id}`);
   revalidatePath("/projects");
-  redirect(`/projects/${id}`);
+  redirect(`/projects/${id}?saved=1`);
 }
 
 // ── Tasks: board interactions (called directly from the client board) ──
@@ -170,7 +170,9 @@ export async function updateTask(formData: FormData) {
   const fromTasks = str(formData.get("from")) === "tasks";
   if (projectId) revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/tasks/${id}`);
-  redirect(`/projects/${projectId}/tasks/${id}${fromTasks ? "?from=tasks" : ""}`);
+  const params = new URLSearchParams({ saved: "1" });
+  if (fromTasks) params.set("from", "tasks");
+  redirect(`/projects/${projectId}/tasks/${id}?${params.toString()}`);
 }
 
 export async function deleteTask(formData: FormData) {
