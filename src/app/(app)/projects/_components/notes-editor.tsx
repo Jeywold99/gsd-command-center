@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef } from "react";
-import { useCreateBlockNote } from "@blocknote/react";
+import { useCreateBlockNote, SuggestionMenuController } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import type { PartialBlock } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-import { notesSchema } from "./notes-schema";
+import { notesSchema, getNotesSlashMenuItems, filterNotesSlashMenuItems } from "./notes-schema";
 import { updateTaskNotes, uploadNoteFile } from "../actions";
 
 // Notion-style block editor for a task's Notes. Autosaves (debounced) to the
@@ -46,7 +46,14 @@ export default function NotesEditor({
 
   return (
     <div className="bn-wrap">
-      <BlockNoteView editor={editor} onChange={save} theme="light" />
+      <BlockNoteView editor={editor} onChange={save} theme="light" slashMenu={false}>
+        <SuggestionMenuController
+          triggerCharacter="/"
+          getItems={async (query) =>
+            filterNotesSlashMenuItems(getNotesSlashMenuItems(editor), query)
+          }
+        />
+      </BlockNoteView>
     </div>
   );
 }
