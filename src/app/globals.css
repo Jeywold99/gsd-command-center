@@ -53,17 +53,19 @@ body {
 .bn-wrap .bn-root {
   --bn-ui-base-z-index: 40 !important;
 }
+/* Only animates translateY/scale — horizontal centering is handled entirely
+   by the element's own -translate-x-1/2 utility (a separate `translate` CSS
+   property in Tailwind v4). Setting an X offset here too would compose with
+   that instead of overriding it, doubling the shift mid-animation and
+   snapping back once the animation ends — exactly the "jumps left, then
+   jumps to center" glitch this caused before. */
 @keyframes saved-pop {
   0% {
     opacity: 0;
-    transform: translate(-50%, -16px) scale(0.85);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(-50%, 2px) scale(1.04);
+    transform: translateY(-10px) scale(0.96);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
