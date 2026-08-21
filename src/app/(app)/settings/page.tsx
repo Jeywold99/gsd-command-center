@@ -3,6 +3,7 @@ import { listApiKeys } from "@/lib/integrations";
 import { listTeam } from "@/lib/team";
 import ApiKeyManager from "./_components/api-key-manager";
 import AddMemberForm from "./_components/add-member-form";
+import AutoCloseDetails from "../_components/auto-close-details";
 import { resetUserPassword, setUserRole, toggleUserActive } from "./team-actions";
 
 const input =
@@ -79,7 +80,7 @@ export default async function SettingsPage() {
                       </div>
                     </div>
 
-                    <details className="group mt-2">
+                    <AutoCloseDetails className="group mt-2">
                       <summary className="text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
                         Manage
                       </summary>
@@ -119,7 +120,7 @@ export default async function SettingsPage() {
                           </form>
                         )}
                       </div>
-                    </details>
+                    </AutoCloseDetails>
                   </li>
                 );
               })}

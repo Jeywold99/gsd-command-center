@@ -106,7 +106,11 @@ export default async function TaskPage({
 
         {/* ── Right: Settings · Assignees · Reminders · Danger ── */}
         <div className="space-y-6">
-          <div className={card}>
+          {/* Sticky: this button also saves the Task Name/Description at the
+              top of the LEFT column (via form="task-edit"), not just the
+              fields in this card — keeping it in view while you scroll makes
+              that scope obvious no matter where you're editing. */}
+          <div className={`${card} sticky top-20 z-10`}>
             <h3 className="font-display text-xl tracking-wide text-ink mb-4">Settings</h3>
             <div className="space-y-4">
               <div>
@@ -149,8 +153,11 @@ export default async function TaskPage({
                 form="task-edit"
                 className="w-full bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide px-6 py-2.5 rounded-full transition-colors shadow-sm"
               >
-                Save
+                Save Task
               </button>
+              <p className="text-center text-[11px] text-black/35">
+                Saves the name, description &amp; settings above.
+              </p>
             </div>
           </div>
 

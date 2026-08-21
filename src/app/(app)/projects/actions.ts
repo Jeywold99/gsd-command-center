@@ -338,6 +338,25 @@ export async function createMilestone(formData: FormData) {
   revalidatePath(`/projects/${projectId}`);
 }
 
+export async function updateMilestone(formData: FormData) {
+  await requireRole("OWNER", "MANAGER");
+  const id = str(formData.get("id"));
+  const projectId = str(formData.get("projectId"));
+  const name = str(formData.get("name"));
+  if (!id || !name) return;
+  await prisma.milestone.update({
+    where: { id },
+    data: {
+      name,
+      description: str(formData.get("description")),
+      status: (str(formData.get("status")) as never) ?? "PENDING",
+      startDate: date(formData.get("startDate")),
+      dueDate: date(formData.get("dueDate")),
+    },
+  });
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+}
+
 export async function deleteMilestone(formData: FormData) {
   await requireRole("OWNER", "MANAGER");
   const id = str(formData.get("id"));

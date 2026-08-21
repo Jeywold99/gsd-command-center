@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Plus, Flag, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus } from "lucide-react";
 import { getProject } from "@/lib/projects";
 import { ProjectStatusBadge, fmtDate } from "../_components/task-badges";
 import KanbanBoard from "../_components/kanban-board";
 import Timeline from "../_components/timeline";
-import { createMilestone, deleteMilestone } from "../actions";
+import MilestoneRow from "../_components/milestone-row";
+import AutoCloseDetails from "../../_components/auto-close-details";
+import { createMilestone } from "../actions";
 
 const mInput =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -83,7 +85,7 @@ export default async function ProjectDetailPage({
       <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display text-2xl tracking-wide text-ink">Phases</h3>
-          <details className="relative">
+          <AutoCloseDetails className="relative">
             <summary className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
               <Plus className="w-3.5 h-3.5" /> Add phase
             </summary>
@@ -104,7 +106,7 @@ export default async function ProjectDetailPage({
                 Add Phase
               </button>
             </form>
-          </details>
+          </AutoCloseDetails>
         </div>
 
         {project.milestones.length === 0 ? (
@@ -112,28 +114,7 @@ export default async function ProjectDetailPage({
         ) : (
           <ul className="divide-y divide-black/[0.06]">
             {project.milestones.map((m) => (
-              <li key={m.id} className="py-2.5 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Flag className="w-4 h-4 text-brand shrink-0" />
-                  <span className="font-semibold text-ink truncate">{m.name}</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-black/45 shrink-0">
-                  <span>
-                    {fmtDate(m.startDate)} – {fmtDate(m.dueDate)}
-                  </span>
-                  <form action={deleteMilestone}>
-                    <input type="hidden" name="id" value={m.id} />
-                    <input type="hidden" name="projectId" value={project.id} />
-                    <button
-                      type="submit"
-                      className="text-black/30 hover:text-red-600 transition"
-                      aria-label="Delete phase"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </form>
-                </div>
-              </li>
+              <MilestoneRow key={m.id} milestone={m} projectId={project.id} />
             ))}
           </ul>
         )}

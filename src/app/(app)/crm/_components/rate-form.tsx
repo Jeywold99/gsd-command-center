@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { setBillingRate } from "../actions";
+import AutoCloseDetails from "../../_components/auto-close-details";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -14,7 +15,7 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
   const [type, setType] = useState<"HOURLY" | "FIXED">("HOURLY");
 
   return (
-    <details className="group mt-4">
+    <AutoCloseDetails className="group mt-4">
       <summary className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
         <Plus className="w-3.5 h-3.5" /> Set new rate
       </summary>
@@ -89,6 +90,6 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
           Save Rate
         </button>
       </form>
-    </details>
+    </AutoCloseDetails>
   );
 }

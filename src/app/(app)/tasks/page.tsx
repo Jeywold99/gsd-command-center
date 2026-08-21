@@ -8,6 +8,7 @@ import { quickAddTask } from "../projects/actions";
 import { initials } from "../projects/_components/task-badges";
 import UserBoard from "./_components/user-board";
 import TaskTable from "./_components/task-table";
+import AutoCloseDetails from "../_components/auto-close-details";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -134,7 +135,7 @@ export default async function TasksPage({
           </div>
 
           {/* New task */}
-          <details className="relative">
+          <AutoCloseDetails className="relative">
             <summary className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors cursor-pointer list-none shadow-sm">
               <Plus className="w-4 h-4" /> New Task
             </summary>
@@ -196,7 +197,7 @@ export default async function TasksPage({
                 Add Task
               </button>
             </form>
-          </details>
+          </AutoCloseDetails>
         </div>
       </div>
 

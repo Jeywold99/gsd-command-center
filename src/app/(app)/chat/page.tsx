@@ -6,6 +6,7 @@ import { listActiveClients, listUsers } from "@/lib/projects";
 import { listProjectOptions } from "@/lib/time";
 import { createChannel } from "./actions";
 import ChatRoom from "./_components/chat-room";
+import AutoCloseDetails from "../_components/auto-close-details";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -45,7 +46,7 @@ export default async function ChatPage({
       <aside className="w-60 shrink-0 border-r border-black/[0.07] flex flex-col">
         <div className="p-3 border-b border-black/[0.07] flex items-center justify-between">
           <span className="font-display text-lg tracking-wide text-ink">Channels</span>
-          <details className="relative">
+          <AutoCloseDetails className="relative">
             <summary className="w-7 h-7 rounded-lg bg-brand text-white flex items-center justify-center cursor-pointer list-none">
               <Plus className="w-4 h-4" />
             </summary>
@@ -94,7 +95,7 @@ export default async function ChatPage({
                 Create Channel
               </button>
             </form>
-          </details>
+          </AutoCloseDetails>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-4">

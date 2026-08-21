@@ -5,6 +5,7 @@ import { getClientById } from "@/lib/crm";
 import { StatusBadge, HealthDot, StageLabel, fmtDate } from "../_components/badges";
 import BillingRateForm from "../_components/rate-form";
 import ClientClock from "../_components/client-clock";
+import AutoCloseDetails from "../../_components/auto-close-details";
 import {
   addNote,
   addContact,
@@ -260,7 +261,7 @@ export default async function ClientDetailPage({
               </ul>
             )}
 
-            <details className="group">
+            <AutoCloseDetails className="group">
               <summary className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
                 <Plus className="w-3.5 h-3.5" /> Add contact
               </summary>
@@ -275,7 +276,7 @@ export default async function ClientDetailPage({
                 </label>
                 <button type="submit" className={smallBtn}>Add</button>
               </form>
-            </details>
+            </AutoCloseDetails>
           </section>
 
           {/* Billing */}

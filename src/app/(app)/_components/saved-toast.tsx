@@ -25,7 +25,7 @@ export default function SavedToast() {
   function show(nextMessage: string) {
     if (timer.current) clearTimeout(timer.current);
     setMessage(nextMessage);
-    timer.current = setTimeout(() => setMessage(null), 3200);
+    timer.current = setTimeout(() => setMessage(null), 3600);
   }
 
   useEffect(() => {
@@ -58,9 +58,11 @@ export default function SavedToast() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed right-4 top-20 z-[100] flex items-center gap-2.5 rounded-xl border border-success/25 bg-white px-4 py-3 text-sm font-bold text-ink shadow-xl motion-safe:animate-[saved-pop_220ms_ease-out]"
+      className="fixed left-1/2 top-20 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-2xl border-2 border-success/30 bg-white px-6 py-4 text-base font-bold text-ink shadow-2xl motion-safe:animate-[saved-pop_380ms_cubic-bezier(.34,1.56,.64,1)]"
     >
-      <CheckCircle2 className="h-5 w-5 text-success" />
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/15">
+        <CheckCircle2 className="h-5 w-5 text-success" />
+      </span>
       {message}
     </div>
   );
