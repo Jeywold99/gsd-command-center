@@ -427,6 +427,7 @@ export async function quickAddTask(formData: FormData) {
       projectId,
       status: status as never,
       priority: (str(formData.get("priority")) as never) ?? "MEDIUM",
+      description: str(formData.get("description")),
       dueDate: date(formData.get("dueDate")),
       position: (max._max.position ?? 0) + 1,
       createdById: session.userId,
@@ -458,6 +459,10 @@ export async function quickAddTask(formData: FormData) {
 
   revalidatePath("/tasks");
   revalidatePath(`/projects/${projectId}`);
+  // Land straight on the new task's page — not back on the board — so adding
+  // Notes, subtasks, or a reminder right after creating is one step, not
+  // "save, then hunt for the card, then click it."
+  redirect(`/projects/${projectId}/tasks/${task.id}?saved=1`);
 }
 
 // ── Notes editor file uploads (BlockNote image/file/video/audio blocks) ──

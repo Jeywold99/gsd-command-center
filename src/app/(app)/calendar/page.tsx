@@ -5,7 +5,7 @@ import { listActiveClients } from "@/lib/projects";
 import { createEvent } from "./actions";
 import EventList from "./_components/event-list";
 import EventItem from "./_components/event-item";
-import AutoCloseDetails from "../_components/auto-close-details";
+import AddModal from "../_components/add-modal";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -59,19 +59,22 @@ export default async function CalendarPage({
           </Link>
         </div>
 
-        <AutoCloseDetails className="relative">
-          <summary className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors cursor-pointer list-none">
-            <Plus className="w-4 h-4" /> New Event
-          </summary>
-          <form
-            action={createEvent}
-            className="absolute right-0 mt-2 w-80 bg-white border border-black/10 rounded-xl shadow-lg p-4 space-y-3 z-30"
-          >
+        <AddModal
+          title="New Event"
+          triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors"
+          trigger={
+            <>
+              <Plus className="w-4 h-4" /> New Event
+            </>
+          }
+          panelClassName="max-w-xl"
+        >
+          <form action={createEvent} className="space-y-4">
             <div>
               <label className={label}>Title *</label>
-              <input name="title" required placeholder="Client kickoff call" className={input} />
+              <input name="title" required autoFocus placeholder="Client kickoff call" className={input} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={label}>Type</label>
                 <select name="type" className={input} defaultValue="MEETING">
@@ -90,13 +93,15 @@ export default async function CalendarPage({
                 </select>
               </div>
             </div>
-            <div>
-              <label className={label}>Start *</label>
-              <input type="datetime-local" name="start" required className={input} />
-            </div>
-            <div>
-              <label className={label}>End</label>
-              <input type="datetime-local" name="end" className={input} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={label}>Start *</label>
+                <input type="datetime-local" name="start" required className={input} />
+              </div>
+              <div>
+                <label className={label}>End</label>
+                <input type="datetime-local" name="end" className={input} />
+              </div>
             </div>
             <div>
               <label className={label}>Meeting link</label>
@@ -106,7 +111,7 @@ export default async function CalendarPage({
               <label className={label}>Description</label>
               <textarea
                 name="description"
-                rows={3}
+                rows={4}
                 placeholder="Agenda, notes, context…"
                 className={input}
               />
@@ -116,12 +121,12 @@ export default async function CalendarPage({
             </label>
             <button
               type="submit"
-              className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide py-2 rounded-full transition-colors"
+              className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
             >
               Add Event
             </button>
           </form>
-        </AutoCloseDetails>
+        </AddModal>
       </div>
 
       {/* Month grid */}

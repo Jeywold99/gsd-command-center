@@ -6,7 +6,7 @@ import { ProjectStatusBadge, fmtDate } from "../_components/task-badges";
 import KanbanBoard from "../_components/kanban-board";
 import Timeline from "../_components/timeline";
 import MilestoneRow from "../_components/milestone-row";
-import AutoCloseDetails from "../../_components/auto-close-details";
+import AddModal from "../../_components/add-modal";
 import { createMilestone } from "../actions";
 
 const mInput =
@@ -85,28 +85,36 @@ export default async function ProjectDetailPage({
       <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display text-2xl tracking-wide text-ink">Phases</h3>
-          <AutoCloseDetails className="relative">
-            <summary className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
-              <Plus className="w-3.5 h-3.5" /> Add phase
-            </summary>
-            <form
-              action={createMilestone}
-              className="absolute right-0 mt-2 w-72 bg-white border border-black/10 rounded-xl shadow-lg p-4 space-y-2 z-20"
-            >
+          <AddModal
+            title="Add Phase"
+            triggerClassName="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand"
+            trigger={
+              <>
+                <Plus className="w-3.5 h-3.5" /> Add phase
+              </>
+            }
+          >
+            <form action={createMilestone} className="space-y-3">
               <input type="hidden" name="projectId" value={project.id} />
-              <input name="name" required placeholder="Phase name *" className={mInput} />
+              <input name="name" required autoFocus placeholder="Phase name *" className={mInput} />
               <div className="grid grid-cols-2 gap-2">
                 <input type="date" name="startDate" className={mInput} title="Start" />
                 <input type="date" name="dueDate" className={mInput} title="Due" />
               </div>
+              <textarea
+                name="description"
+                rows={3}
+                placeholder="What this phase covers… (optional)"
+                className={mInput}
+              />
               <button
                 type="submit"
-                className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide py-2 rounded-full transition-colors"
+                className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
               >
                 Add Phase
               </button>
             </form>
-          </AutoCloseDetails>
+          </AddModal>
         </div>
 
         {project.milestones.length === 0 ? (

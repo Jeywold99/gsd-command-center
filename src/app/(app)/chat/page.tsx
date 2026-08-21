@@ -6,7 +6,7 @@ import { listActiveClients, listUsers } from "@/lib/projects";
 import { listProjectOptions } from "@/lib/time";
 import { createChannel } from "./actions";
 import ChatRoom from "./_components/chat-room";
-import AutoCloseDetails from "../_components/auto-close-details";
+import AddModal from "../_components/add-modal";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -46,21 +46,15 @@ export default async function ChatPage({
       <aside className="w-60 shrink-0 border-r border-black/[0.07] flex flex-col">
         <div className="p-3 border-b border-black/[0.07] flex items-center justify-between">
           <span className="font-display text-lg tracking-wide text-ink">Channels</span>
-          <AutoCloseDetails className="relative">
-            <summary className="w-7 h-7 rounded-lg bg-brand text-white flex items-center justify-center cursor-pointer list-none">
-              <Plus className="w-4 h-4" />
-            </summary>
-            {/* Opens left-aligned (rightward into the chat area): the popover
-                is wider (w-72) than the 240px channel sidebar, and the outer
-                panel has overflow-hidden — anchoring it right-0 pushed its left
-                edge ~60px past the panel's left edge, where it got clipped. */}
-            <form
-              action={createChannel}
-              className="absolute left-0 mt-2 w-72 bg-white border border-black/10 rounded-xl shadow-lg p-4 space-y-3 z-30"
-            >
+          <AddModal
+            title="New Channel"
+            triggerClassName="w-7 h-7 rounded-lg bg-brand text-white flex items-center justify-center"
+            trigger={<Plus className="w-4 h-4" />}
+          >
+            <form action={createChannel} className="space-y-3">
               <div>
                 <label className={label}>Channel name *</label>
-                <input name="name" required placeholder="acme-launch" className={input} />
+                <input name="name" required autoFocus placeholder="acme-launch" className={input} />
               </div>
               <div>
                 <label className={label}>Scope</label>
@@ -90,12 +84,12 @@ export default async function ChatPage({
               </div>
               <button
                 type="submit"
-                className="w-full bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide py-2 rounded-full transition-colors"
+                className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
               >
                 Create Channel
               </button>
             </form>
-          </AutoCloseDetails>
+          </AddModal>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-4">

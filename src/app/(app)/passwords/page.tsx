@@ -6,7 +6,7 @@ import { listActiveClients } from "@/lib/projects";
 import { createCredential } from "./actions";
 import CredentialForm from "./_components/credential-form";
 import CredentialCard from "./_components/credential-card";
-import AutoCloseDetails from "../_components/auto-close-details";
+import AddModal from "../_components/add-modal";
 
 export default async function PasswordsPage({
   searchParams,
@@ -43,14 +43,17 @@ export default async function PasswordsPage({
           </Link>
         </div>
 
-        <AutoCloseDetails className="relative">
-          <summary className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors cursor-pointer list-none shadow-sm">
-            <Plus className="w-4 h-4" /> New Password
-          </summary>
-          <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white border border-black/10 rounded-xl shadow-lg p-4 z-30">
-            <CredentialForm action={createCredential} mode="create" clients={clients} />
-          </div>
-        </AutoCloseDetails>
+        <AddModal
+          title="New Password"
+          triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
+          trigger={
+            <>
+              <Plus className="w-4 h-4" /> New Password
+            </>
+          }
+        >
+          <CredentialForm action={createCredential} mode="create" clients={clients} />
+        </AddModal>
       </div>
 
       {/* Security note */}

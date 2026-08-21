@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { setBillingRate } from "../actions";
-import AutoCloseDetails from "../../_components/auto-close-details";
+import AddModal from "../../_components/add-modal";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
@@ -15,11 +15,16 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
   const [type, setType] = useState<"HOURLY" | "FIXED">("HOURLY");
 
   return (
-    <AutoCloseDetails className="group mt-4">
-      <summary className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
-        <Plus className="w-3.5 h-3.5" /> Set new rate
-      </summary>
-      <form action={setBillingRate} className="mt-3 space-y-2">
+    <AddModal
+      title="Set New Rate"
+      triggerClassName="mt-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand"
+      trigger={
+        <>
+          <Plus className="w-3.5 h-3.5" /> Set new rate
+        </>
+      }
+    >
+      <form action={setBillingRate} className="space-y-3">
         <input type="hidden" name="clientId" value={clientId} />
 
         <div className="inline-flex rounded-full bg-cream border border-black/10 p-1">
@@ -53,6 +58,7 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
               step="0.01"
               min="0"
               required
+              autoFocus
               placeholder="Hourly rate"
               className={input}
             />
@@ -72,6 +78,7 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
               type="number"
               step="0.01"
               min="0"
+              autoFocus
               placeholder="Retainer rate"
               className={input}
             />
@@ -90,6 +97,6 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
           Save Rate
         </button>
       </form>
-    </AutoCloseDetails>
+    </AddModal>
   );
 }

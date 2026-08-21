@@ -5,7 +5,7 @@ import { getClientById } from "@/lib/crm";
 import { StatusBadge, HealthDot, StageLabel, fmtDate } from "../_components/badges";
 import BillingRateForm from "../_components/rate-form";
 import ClientClock from "../_components/client-clock";
-import AutoCloseDetails from "../../_components/auto-close-details";
+import AddModal from "../../_components/add-modal";
 import {
   addNote,
   addContact,
@@ -261,13 +261,18 @@ export default async function ClientDetailPage({
               </ul>
             )}
 
-            <AutoCloseDetails className="group">
-              <summary className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand cursor-pointer list-none">
-                <Plus className="w-3.5 h-3.5" /> Add contact
-              </summary>
-              <form action={addContact} className="mt-3 space-y-2">
+            <AddModal
+              title="Add Contact"
+              triggerClassName="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand"
+              trigger={
+                <>
+                  <Plus className="w-3.5 h-3.5" /> Add contact
+                </>
+              }
+            >
+              <form action={addContact} className="space-y-3">
                 <input type="hidden" name="clientId" value={client.id} />
-                <input name="name" required placeholder="Name *" className={input} />
+                <input name="name" required autoFocus placeholder="Name *" className={input} />
                 <input name="title" placeholder="Title" className={input} />
                 <input name="email" type="email" placeholder="Email" className={input} />
                 <input name="phone" placeholder="Phone" className={input} />
@@ -276,7 +281,7 @@ export default async function ClientDetailPage({
                 </label>
                 <button type="submit" className={smallBtn}>Add</button>
               </form>
-            </AutoCloseDetails>
+            </AddModal>
           </section>
 
           {/* Billing */}

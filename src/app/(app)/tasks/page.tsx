@@ -8,7 +8,7 @@ import { quickAddTask } from "../projects/actions";
 import { initials } from "../projects/_components/task-badges";
 import UserBoard from "./_components/user-board";
 import TaskTable from "./_components/task-table";
-import AutoCloseDetails from "../_components/auto-close-details";
+import AddModal from "../_components/add-modal";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -135,17 +135,26 @@ export default async function TasksPage({
           </div>
 
           {/* New task */}
-          <AutoCloseDetails className="relative">
-            <summary className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors cursor-pointer list-none shadow-sm">
-              <Plus className="w-4 h-4" /> New Task
-            </summary>
-            <form
-              action={quickAddTask}
-              className="absolute right-0 mt-2 w-80 bg-white border border-black/10 rounded-xl shadow-lg p-4 space-y-3 z-30"
-            >
+          <AddModal
+            title="New Task"
+            triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
+            trigger={
+              <>
+                <Plus className="w-4 h-4" /> New Task
+              </>
+            }
+            panelClassName="max-w-xl"
+          >
+            <form action={quickAddTask} className="space-y-4">
               <div>
                 <label className={label}>Task title *</label>
-                <input name="title" required placeholder="e.g. Draft ad creative brief" className={input} />
+                <input
+                  name="title"
+                  required
+                  autoFocus
+                  placeholder="e.g. Draft ad creative brief"
+                  className={input}
+                />
               </div>
               <div>
                 <label className={label}>Project *</label>
@@ -165,7 +174,7 @@ export default async function TasksPage({
                   </select>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={label}>Priority</label>
                   <select name="priority" defaultValue="MEDIUM" className={input}>
@@ -181,6 +190,19 @@ export default async function TasksPage({
                 </div>
               </div>
               <div>
+                <label className={label}>Notes</label>
+                <textarea
+                  name="description"
+                  rows={4}
+                  placeholder="Anything you already know — context, links, what done looks like…"
+                  className={input}
+                />
+                <p className="text-[10px] text-black/40 mt-1">
+                  You&apos;ll land on the task after creating it, where the full Notes editor
+                  (uploads, embeds, checklists) is available too.
+                </p>
+              </div>
+              <div>
                 <label className={label}>Assign to</label>
                 <select name="assigneeIds" multiple defaultValue={[session.userId]} className={`${input} h-24`}>
                   {users.map((u) => (
@@ -192,12 +214,12 @@ export default async function TasksPage({
               <button
                 type="submit"
                 disabled={projects.length === 0}
-                className="w-full bg-brand hover:bg-brand-hover disabled:opacity-50 text-white text-xs font-bold uppercase tracking-wide py-2 rounded-full transition-colors"
+                className="w-full bg-brand hover:bg-brand-hover disabled:opacity-50 text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
               >
-                Add Task
+                Create Task →
               </button>
             </form>
-          </AutoCloseDetails>
+          </AddModal>
         </div>
       </div>
 
