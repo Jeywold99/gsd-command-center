@@ -27,9 +27,15 @@ export async function listEntries(userId: string, from: Date, to: Date) {
   });
 }
 
+// Excludes archived projects AND projects whose client has churned — those are
+// treated as archived too and shouldn't be pickable anywhere (New Task,
+// starting a timer, creating a project channel, etc).
 export async function listProjectOptions() {
   return prisma.project.findMany({
-    where: { status: { not: "ARCHIVED" } },
+    where: {
+      status: { not: "ARCHIVED" },
+      OR: [{ clientId: null }, { client: { status: { not: "CHURNED" } } }],
+    },
     orderBy: { name: "asc" },
     select: {
       id: true,
