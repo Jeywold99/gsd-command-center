@@ -1,7 +1,92 @@
 import Link from "next/link";
-import { Plus, FolderKanban, ListChecks, Archive, ArrowLeft } from "lucide-react";
+import { Plus, FolderKanban, ListChecks, Archive, ArrowLeft, Building2 } from "lucide-react";
 import { listProjects } from "@/lib/projects";
 import { ProjectStatusBadge, fmtDate } from "./_components/task-badges";
+
+type ProjectRow = Awaited<ReturnType<typeof listProjects>>[number];
+
+function ProjectCard({ p }: { p: ProjectRow }) {
+  const churned = p.client?.status === "CHURNED";
+  return (
+    <Link
+      href={`/projects/${p.id}`}
+      className="bg-white rounded-2xl border border-black/[0.07] p-5 hover:border-brand/40 hover:shadow-sm transition group"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-bold text-ink leading-snug group-hover:text-brand transition-colors">
+          {p.name}
+        </h3>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <ProjectStatusBadge status={p.status} />
+          {churned && (
+            <span className="text-[10px] font-bold uppercase tracking-wide text-black/50 bg-black/5 border border-black/15 rounded px-1.5 py-0.5">
+              Churned
+            </span>
+          )}
+        </div>
+      </div>
+
+      {p.description && (
+        <p className="mt-3 text-sm text-black/45 line-clamp-2">{p.description}</p>
+      )}
+
+      <div className="mt-4 pt-3 border-t border-black/[0.06] flex items-center gap-4 text-xs text-black/45">
+        <span className="inline-flex items-center gap-1">
+          <ListChecks className="w-3.5 h-3.5" />
+          {p._count.tasks} tasks
+        </span>
+        {p.budget && <span>${String(p.budget)}</span>}
+        {p.dueDate && <span className="ml-auto">Due {fmtDate(p.dueDate)}</span>}
+      </div>
+    </Link>
+  );
+}
+
+function ClientGroup({
+  clientId,
+  companyName,
+  colorHex,
+  projects,
+}: {
+  clientId: string | null;
+  companyName: string;
+  colorHex: string | null;
+  projects: ProjectRow[];
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        {clientId ? (
+          <Link
+            href={`/crm/${clientId}`}
+            className="flex items-center gap-2 group/client"
+          >
+            <span
+              className="w-3 h-3 rounded-full shrink-0"
+              style={{ background: colorHex ?? "#cbd5e1" }}
+            />
+            <h2 className="font-display text-2xl tracking-wide text-ink group-hover/client:text-brand transition-colors">
+              {companyName}
+            </h2>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2 text-black/40">
+            <Building2 className="w-4 h-4" />
+            <h2 className="font-display text-2xl tracking-wide">{companyName}</h2>
+          </div>
+        )}
+        <span className="text-xs font-semibold text-black/35">
+          {projects.length} project{projects.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {projects.map((p) => (
+          <ProjectCard key={p.id} p={p} />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default async function ProjectsPage({
   searchParams,
@@ -12,8 +97,25 @@ export default async function ProjectsPage({
   const showInactive = show === "archived";
   const projects = await listProjects(showInactive);
 
+  // Group by client — the data model's real hierarchy (Client > Project > Task)
+  // — sorted alphabetically, with un-cliented "Internal" projects trailing last.
+  const byClient = new Map<string, { id: string | null; name: string; color: string | null; projects: ProjectRow[] }>();
+  for (const p of projects) {
+    const key = p.client?.id ?? "__internal__";
+    const name = p.client?.companyName ?? "Internal Projects";
+    if (!byClient.has(key)) {
+      byClient.set(key, { id: p.client?.id ?? null, name, color: p.client?.colorHex ?? null, projects: [] });
+    }
+    byClient.get(key)!.projects.push(p);
+  }
+  const groups = [...byClient.values()].sort((a, b) => {
+    if (a.id === null) return 1;
+    if (b.id === null) return -1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between gap-3">
         {showInactive ? (
           <Link
@@ -59,59 +161,15 @@ export default async function ProjectsPage({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {projects.map((p) => {
-            const churned = p.client?.status === "CHURNED";
-            return (
-              <Link
-                key={p.id}
-                href={`/projects/${p.id}`}
-                className="bg-white rounded-2xl border border-black/[0.07] p-5 hover:border-brand/40 hover:shadow-sm transition group"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-bold text-ink leading-snug group-hover:text-brand transition-colors">
-                    {p.name}
-                  </h3>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <ProjectStatusBadge status={p.status} />
-                    {churned && (
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-black/50 bg-black/5 border border-black/15 rounded px-1.5 py-0.5">
-                        Churned
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-2 flex items-center gap-2 text-sm text-black/50">
-                  {p.client ? (
-                    <>
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ background: p.client.colorHex ?? "#cbd5e1" }}
-                      />
-                      {p.client.companyName}
-                    </>
-                  ) : (
-                    <span className="text-black/40">Internal</span>
-                  )}
-                </div>
-
-                {p.description && (
-                  <p className="mt-3 text-sm text-black/45 line-clamp-2">{p.description}</p>
-                )}
-
-                <div className="mt-4 pt-3 border-t border-black/[0.06] flex items-center gap-4 text-xs text-black/45">
-                  <span className="inline-flex items-center gap-1">
-                    <ListChecks className="w-3.5 h-3.5" />
-                    {p._count.tasks} tasks
-                  </span>
-                  {p.budget && <span>${String(p.budget)}</span>}
-                  {p.dueDate && <span className="ml-auto">Due {fmtDate(p.dueDate)}</span>}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        groups.map((g) => (
+          <ClientGroup
+            key={g.id ?? "__internal__"}
+            clientId={g.id}
+            companyName={g.name}
+            colorHex={g.color}
+            projects={g.projects}
+          />
+        ))
       )}
     </div>
   );

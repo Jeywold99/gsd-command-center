@@ -86,8 +86,15 @@ export async function updateProject(
 // ── Tasks: board interactions (called directly from the client board) ──
 
 // Returns the created task so the client board can append it optimistically.
-// By default the creator is assigned to the task they add.
-export async function createTask(projectId: string, status: string, title: string) {
+// By default the creator is assigned to the task they add. milestoneId sets
+// which Phase it belongs to (null/omitted = no phase) — set when the board's
+// "+ Add task" is used inside a phase swimlane.
+export async function createTask(
+  projectId: string,
+  status: string,
+  title: string,
+  milestoneId?: string | null,
+) {
   const session = await verifySession();
   if (!title.trim()) return null;
   const max = await prisma.task.aggregate({
@@ -99,6 +106,7 @@ export async function createTask(projectId: string, status: string, title: strin
       title: title.trim(),
       projectId,
       status: status as never,
+      milestoneId: milestoneId || null,
       position: (max._max.position ?? 0) + 1,
       createdById: session.userId,
       assignees: { create: { userId: session.userId } },
@@ -125,21 +133,24 @@ export async function moveTaskStatus(taskId: string, status: string) {
   revalidatePath("/tasks");
 }
 
-// Persist a drag: new status for the moved task + re-index the destination column.
+// Persist a drag: new status for the moved task + re-index the destination
+// column. milestoneId is undefined when the drag stayed within the same phase
+// swimlane (don't touch it); pass a string or null when the card was dropped
+// into a different phase swimlane (reassign — null = moved to "No Phase").
 export async function moveTask(
   taskId: string,
   status: string,
   orderedIds: string[],
+  milestoneId?: string | null,
 ) {
   await verifySession();
+  const data: { status: never; completedAt: Date | null; milestoneId?: string | null } = {
+    status: status as never,
+    completedAt: status === "DONE" ? new Date() : null,
+  };
+  if (milestoneId !== undefined) data.milestoneId = milestoneId;
   await prisma.$transaction([
-    prisma.task.update({
-      where: { id: taskId },
-      data: {
-        status: status as never,
-        completedAt: status === "DONE" ? new Date() : null,
-      },
-    }),
+    prisma.task.update({ where: { id: taskId }, data }),
     ...orderedIds.map((id, i) =>
       prisma.task.update({ where: { id }, data: { position: i } }),
     ),

@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarClock, GitBranch } from "lucide-react";
+import { CalendarClock, GitBranch, Flag, CheckCircle2 } from "lucide-react";
 import { COLUMNS, PRIORITY, initials, fmtDate } from "./task-badges";
 import { createTask, moveTask } from "../actions";
 
@@ -32,16 +32,42 @@ export type BoardTask = {
   status: string;
   priority: string;
   dueDate: Date | string | null;
+  milestoneId: string | null;
   assignees: Assignee[];
   _count: { subtasks: number };
 };
 
+export type BoardPhase = {
+  id: string;
+  name: string;
+  status: string;
+  startDate: Date | string | null;
+  dueDate: Date | string | null;
+};
+
+// Tasks with no phase live under this synthetic bucket. Never collides with a
+// real milestone id (those are uuids — no colons).
+const NO_PHASE = "none";
+// Container id = "<phaseKey>:<status>" — a compound key so the same generic
+// drag machinery that used to move between 4 status containers now also moves
+// between phase swimlanes. Colon is safe: uuids and status enums never contain one.
+const containerId = (phaseKey: string, status: string) => `${phaseKey}:${status}`;
+function parseContainer(id: string): { phaseKey: string; status: string } {
+  const i = id.indexOf(":");
+  return { phaseKey: id.slice(0, i), status: id.slice(i + 1) };
+}
+
 type Cols = Record<string, BoardTask[]>;
 
-function group(tasks: BoardTask[]): Cols {
+function group(tasks: BoardTask[], phaseIds: string[]): Cols {
   const cols: Cols = {};
-  for (const c of COLUMNS) cols[c.status] = [];
-  for (const t of tasks) (cols[t.status] ??= []).push(t);
+  for (const phaseKey of [...phaseIds, NO_PHASE]) {
+    for (const c of COLUMNS) cols[containerId(phaseKey, c.status)] = [];
+  }
+  for (const t of tasks) {
+    const key = containerId(t.milestoneId ?? NO_PHASE, t.status);
+    (cols[key] ??= []).push(t);
+  }
   return cols;
 }
 
@@ -117,7 +143,7 @@ function TaskCard({ task, projectId }: { task: BoardTask; projectId: string }) {
   );
 }
 
-function AddCard({ status, onAdd }: { status: string; onAdd: (s: string, t: string) => void }) {
+function AddCard({ container, onAdd }: { container: string; onAdd: (c: string, t: string) => void }) {
   const [val, setVal] = useState("");
   return (
     <form
@@ -126,7 +152,7 @@ function AddCard({ status, onAdd }: { status: string; onAdd: (s: string, t: stri
         const t = val.trim();
         if (!t) return;
         setVal("");
-        onAdd(status, t);
+        onAdd(container, t);
       }}
       className="mt-2"
     >
@@ -141,24 +167,24 @@ function AddCard({ status, onAdd }: { status: string; onAdd: (s: string, t: stri
 }
 
 function Column({
-  status,
+  container,
   label,
   tasks,
   projectId,
   onAdd,
 }: {
-  status: string;
+  container: string;
   label: string;
   tasks: BoardTask[];
   projectId: string;
-  onAdd: (s: string, t: string) => void;
+  onAdd: (c: string, t: string) => void;
 }) {
-  const { setNodeRef } = useDroppable({ id: status });
+  const { setNodeRef } = useDroppable({ id: container });
   return (
-    <div className="bg-cream rounded-2xl border border-black/[0.06] p-3 flex flex-col">
-      <div className="flex items-center justify-between px-1 mb-3">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">{label}</span>
-        <span className="text-[11px] font-bold text-ink/35">{tasks.length}</span>
+    <div className="bg-cream rounded-xl border border-black/[0.06] p-2.5 flex flex-col">
+      <div className="flex items-center justify-between px-1 mb-2">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-ink/50">{label}</span>
+        <span className="text-[10px] font-bold text-ink/30">{tasks.length}</span>
       </div>
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div ref={setNodeRef} className="space-y-2 min-h-[24px]">
@@ -167,7 +193,77 @@ function Column({
           ))}
         </div>
       </SortableContext>
-      <AddCard status={status} onAdd={onAdd} />
+      <AddCard container={container} onAdd={onAdd} />
+    </div>
+  );
+}
+
+const PHASE_STATUS_STYLE: Record<string, string> = {
+  DONE: "bg-success/10 text-success",
+  IN_PROGRESS: "bg-brand-pale text-brand",
+  PENDING: "bg-black/5 text-ink/50",
+};
+
+function Swimlane({
+  phase,
+  bare,
+  cols,
+  projectId,
+  onAdd,
+}: {
+  phase: BoardPhase | null; // null = the "No Phase" bucket
+  // No header at all — used for the "No Phase" lane when a project has no
+  // phases defined yet, so the board looks exactly like the old flat one.
+  bare?: boolean;
+  cols: Cols;
+  projectId: string;
+  onAdd: (c: string, t: string) => void;
+}) {
+  const phaseKey = phase?.id ?? NO_PHASE;
+  const count = COLUMNS.reduce((n, c) => n + (cols[containerId(phaseKey, c.status)]?.length ?? 0), 0);
+
+  return (
+    <div className="space-y-2">
+      {!bare && (
+        <div
+          className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
+            phase ? "bg-white border border-black/[0.07]" : "bg-transparent"
+          }`}
+        >
+          {phase ? (
+            <Flag className={`w-4 h-4 shrink-0 ${phase.status === "DONE" ? "text-success" : "text-brand"}`} />
+          ) : (
+            <span className="w-4 h-4 shrink-0" />
+          )}
+          <span className={`font-bold ${phase ? "text-ink" : "text-ink/40 text-sm uppercase tracking-wide text-xs"}`}>
+            {phase ? phase.name : "No Phase"}
+          </span>
+          {phase && phase.status !== "PENDING" && (
+            <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${PHASE_STATUS_STYLE[phase.status] ?? ""}`}>
+              {phase.status === "DONE" && <CheckCircle2 className="inline w-2.5 h-2.5 mr-0.5 -mt-0.5" />}
+              {phase.status === "DONE" ? "Done" : "In Progress"}
+            </span>
+          )}
+          {phase && (phase.startDate || phase.dueDate) && (
+            <span className="text-xs text-black/40">
+              {fmtDate(phase.startDate)} – {fmtDate(phase.dueDate)}
+            </span>
+          )}
+          <span className="ml-auto text-xs font-semibold text-black/35">{count} task{count === 1 ? "" : "s"}</span>
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+        {COLUMNS.map((c) => (
+          <Column
+            key={c.status}
+            container={containerId(phaseKey, c.status)}
+            label={c.label}
+            tasks={cols[containerId(phaseKey, c.status)] ?? []}
+            projectId={projectId}
+            onAdd={onAdd}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -175,11 +271,14 @@ function Column({
 export default function KanbanBoard({
   projectId,
   initialTasks,
+  phases = [],
 }: {
   projectId: string;
   initialTasks: BoardTask[];
+  phases?: BoardPhase[];
 }) {
-  const [cols, setCols] = useState<Cols>(() => group(initialTasks));
+  const phaseIds = phases.map((p) => p.id);
+  const [cols, setCols] = useState<Cols>(() => group(initialTasks, phaseIds));
   const [activeId, setActiveId] = useState<string | null>(null);
   const colsRef = useRef(cols);
   useEffect(() => {
@@ -210,7 +309,8 @@ export default function KanbanBoard({
       const overItems = prev[overC];
       const idx = activeItems.findIndex((t) => t.id === active.id);
       if (idx < 0) return prev;
-      const moved = { ...activeItems[idx], status: overC };
+      const { phaseKey, status } = parseContainer(overC);
+      const moved = { ...activeItems[idx], status, milestoneId: phaseKey === NO_PHASE ? null : phaseKey };
       const overIdx = overItems.findIndex((t) => t.id === over.id);
       const insertAt = overIdx >= 0 ? overIdx : overItems.length;
       return {
@@ -239,16 +339,24 @@ export default function KanbanBoard({
       setCols(next);
     }
 
+    // By this point onDragOver has already live-reparented the card into
+    // `overC` in state (or it never left its own column), so — same as
+    // status — we just always persist whatever container it ended up in. No
+    // "did it actually change" check needed; setting it to its current value
+    // is harmless either way.
+    const { phaseKey, status } = parseContainer(overC);
     const orderedIds = next[overC].map((t) => t.id);
-    void moveTask(String(active.id), overC, orderedIds);
+    void moveTask(String(active.id), status, orderedIds, phaseKey === NO_PHASE ? null : phaseKey);
   }
 
-  async function handleAdd(status: string, title: string) {
-    const created = await createTask(projectId, status, title);
+  async function handleAdd(container: string, title: string) {
+    const { phaseKey, status } = parseContainer(container);
+    const milestoneId = phaseKey === NO_PHASE ? null : phaseKey;
+    const created = await createTask(projectId, status, title, milestoneId);
     if (created) {
       setCols((prev) => ({
         ...prev,
-        [status]: [...prev[status], created as unknown as BoardTask],
+        [container]: [...(prev[container] ?? []), created as unknown as BoardTask],
       }));
     }
   }
@@ -261,17 +369,19 @@ export default function KanbanBoard({
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {COLUMNS.map((c) => (
-          <Column
-            key={c.status}
-            status={c.status}
-            label={c.label}
-            tasks={cols[c.status] ?? []}
-            projectId={projectId}
-            onAdd={handleAdd}
-          />
+      <div className="space-y-6">
+        {phases.map((phase) => (
+          <Swimlane key={phase.id} phase={phase} cols={cols} projectId={projectId} onAdd={handleAdd} />
         ))}
+        {/* "No Phase" bucket. Rendered bare (no header) when the project has
+            no phases at all, so the board looks exactly like the old flat one. */}
+        <Swimlane
+          phase={null}
+          bare={phases.length === 0}
+          cols={cols}
+          projectId={projectId}
+          onAdd={handleAdd}
+        />
       </div>
       <DragOverlay>
         {activeTask ? (

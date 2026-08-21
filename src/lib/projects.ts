@@ -22,7 +22,7 @@ export async function listProjects(showInactive = false) {
         },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     include: {
-      client: { select: { companyName: true, colorHex: true, status: true } },
+      client: { select: { id: true, companyName: true, colorHex: true, status: true } },
       _count: { select: { tasks: true, milestones: true } },
     },
   });

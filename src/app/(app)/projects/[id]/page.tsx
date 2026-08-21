@@ -131,7 +131,11 @@ export default async function ProjectDetailPage({
           </Link>
         </div>
         {!isTimeline && (
-          <span className="text-xs text-black/40">Drag cards between columns · click to open</span>
+          <span className="text-xs text-black/40">
+            {project.milestones.length > 0
+              ? "Drag cards between columns or phases · click to open"
+              : "Drag cards between columns · click to open"}
+          </span>
         )}
       </div>
 
@@ -153,7 +157,17 @@ export default async function ProjectDetailPage({
           }))}
         />
       ) : (
-        <KanbanBoard projectId={project.id} initialTasks={project.tasks} />
+        <KanbanBoard
+          projectId={project.id}
+          initialTasks={project.tasks}
+          phases={project.milestones.map((m) => ({
+            id: m.id,
+            name: m.name,
+            status: m.status,
+            startDate: m.startDate,
+            dueDate: m.dueDate,
+          }))}
+        />
       )}
     </div>
   );
