@@ -65,7 +65,7 @@ export default async function TimesheetPage({
     <div className="space-y-6">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex items-center rounded-full bg-cream border border-black/10">
             <Link href={`/timesheet?week=${prevWeek}&user=${targetUserId}`} className="p-2 text-ink/60 hover:text-ink" aria-label="Previous week">
               <ChevronLeft className="w-4 h-4" />
@@ -96,7 +96,7 @@ export default async function TimesheetPage({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <a href={`${exportBase}&type=payroll`} className="inline-flex items-center gap-1.5 border border-black/10 text-ink/70 hover:bg-cream text-sm font-semibold px-3 py-2 rounded-full transition">
             <Download className="w-4 h-4" /> Payroll CSV
           </a>
@@ -146,6 +146,7 @@ export default async function TimesheetPage({
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-ink/45 border-b border-black/[0.07]">
@@ -166,6 +167,7 @@ export default async function TimesheetPage({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

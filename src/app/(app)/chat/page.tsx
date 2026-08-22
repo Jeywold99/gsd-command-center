@@ -40,10 +40,15 @@ export default async function ChatPage({
     items: channels.filter((c) => c.scope === scope),
   }));
 
+  // Below `lg` there's only room for one pane — show the channel list until
+  // one is picked (tracked in the URL already), then swap to just the room
+  // with a way back, instead of squeezing a 240px sidebar into ~375px.
   return (
     <div className="flex h-[calc(100vh-8rem)] bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
       {/* Channel sidebar */}
-      <aside className="w-60 shrink-0 border-r border-black/[0.07] flex flex-col">
+      <aside
+        className={`${selected ? "hidden lg:flex" : "flex"} w-full lg:w-60 shrink-0 border-r border-black/[0.07] flex-col`}
+      >
         <div className="p-3 border-b border-black/[0.07] flex items-center justify-between">
           <span className="font-display text-lg tracking-wide text-ink">Channels</span>
           <AddModal
@@ -133,21 +138,29 @@ export default async function ChatPage({
       </aside>
 
       {/* Chat area */}
-      <div className="flex-1 min-w-0">
+      <div className={`${selected ? "flex" : "hidden lg:flex"} flex-1 min-w-0 flex-col`}>
         {selected ? (
-          <ChatRoom
-            key={selected.id}
-            channelId={selected.id}
-            channelName={selected.name}
-            initial={messages.map((m) => ({
-              id: m.id,
-              content: m.content,
-              createdAt: m.createdAt,
-              sender: m.sender,
-            }))}
-            meId={me?.id ?? ""}
-            users={users.map((u) => ({ id: u.id, name: u.name }))}
-          />
+          <>
+            <Link
+              href="/chat"
+              className="lg:hidden flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-ink/50 hover:text-ink border-b border-black/[0.07]"
+            >
+              ← Back to channels
+            </Link>
+            <ChatRoom
+              key={selected.id}
+              channelId={selected.id}
+              channelName={selected.name}
+              initial={messages.map((m) => ({
+                id: m.id,
+                content: m.content,
+                createdAt: m.createdAt,
+                sender: m.sender,
+              }))}
+              meId={me?.id ?? ""}
+              users={users.map((u) => ({ id: u.id, name: u.name }))}
+            />
+          </>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center p-6">
             <div className="w-14 h-14 rounded-2xl bg-brand-pale text-brand flex items-center justify-center mb-4">

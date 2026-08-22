@@ -113,7 +113,7 @@ export default async function TasksPage({
           </Link>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Active / Archived toggle */}
           <div className="inline-flex rounded-full bg-cream border border-black/10 p-1">
             <Link href={hrefWith(sp.user, viewParam, false)} className={viewBtn(!archivedOnly)}>

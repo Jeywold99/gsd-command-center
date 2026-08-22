@@ -47,10 +47,15 @@ export default async function InboxPage({
   );
   const threadNeedsReply = latestInbound?.needsReply ?? false;
 
+  // Below `lg` there's only room for one pane — show the list until a thread
+  // is picked (tracked in the URL already), then swap to just the
+  // conversation with a way back, instead of squeezing both into ~375px.
   return (
     <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-2xl border border-black/[0.07] bg-white">
       {/* ── Thread list ── */}
-      <aside className="w-80 shrink-0 border-r border-black/[0.07] flex flex-col">
+      <aside
+        className={`${selected ? "hidden lg:flex" : "flex"} w-full lg:w-80 shrink-0 border-r border-black/[0.07] flex-col`}
+      >
         <div className="p-3 border-b border-black/[0.06]">
           <div className="flex gap-1">
             {FILTERS.map((f) => (
@@ -127,7 +132,15 @@ export default async function InboxPage({
       </aside>
 
       {/* ── Conversation ── */}
-      <section className="flex-1 flex flex-col min-w-0">
+      <section className={`${selected ? "flex" : "hidden lg:flex"} flex-1 flex-col min-w-0`}>
+        {selected && (
+          <Link
+            href={`/inbox?filter=${filter}`}
+            className="lg:hidden flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-ink/50 hover:text-ink border-b border-black/[0.07]"
+          >
+            ← Back to inbox
+          </Link>
+        )}
         {!selected ? (
           <div className="flex-1 grid place-items-center text-center text-black/40">
             <div>

@@ -151,7 +151,13 @@ export default function NotificationBell({
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-black/[0.08] z-50 overflow-hidden"
+          // Anchoring right-0 to this small button (not the viewport) let the
+          // panel's left edge go off-screen on narrow phones, since the bell
+          // isn't pinned to the true right edge of the page. Below `sm`, it's
+          // viewport-fixed instead — same idea as the "fixed" toast below,
+          // which never had this problem because it's anchored to a page
+          // corner, not a button.
+          className="fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 w-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-black/[0.08] z-50 overflow-hidden"
           role="menu"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.06]">

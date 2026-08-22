@@ -307,7 +307,7 @@ export default function ChatRoom({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="px-5 py-3 border-b border-black/[0.07] flex items-center justify-between">
         <span className="font-display text-xl tracking-wide text-ink">#{channelName}</span>
         <span className={`text-[11px] font-bold uppercase tracking-wide inline-flex items-center gap-1.5 ${connected ? "text-success" : "text-black/30"}`}>
