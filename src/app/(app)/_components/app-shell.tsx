@@ -24,6 +24,7 @@ import {
 import { logout } from "@/app/actions/auth";
 import NotificationBell from "./notification-bell";
 import ClockInButton from "./clock-in-button";
+import GlobalSearch from "./global-search";
 import SavedToast from "./saved-toast";
 
 type Notification = {
@@ -233,6 +234,8 @@ export default function AppShell({
           </div>
 
           <div className="flex items-center gap-3">
+            <GlobalSearch />
+
             <ClockInButton running={running} />
 
             <NotificationBell
