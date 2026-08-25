@@ -112,69 +112,62 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Weekly income + client clocks */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <section className="lg:col-span-2 bg-white rounded-2xl border border-black/[0.07] p-6">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-display text-2xl tracking-wide text-ink">
-              This Week&apos;s Income
-            </h3>
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/45">
-                Landing this week
-              </p>
-              <p className="font-display text-3xl tracking-wide text-brand leading-none">
-                {money(income.total)}
-              </p>
-            </div>
-          </div>
-          <p className="text-xs text-black/40 mb-4">
-            {payDateFmt(income.weekStart)} – {payDateFmt(income.weekEnd)}
-          </p>
-          {income.rows.length === 0 ? (
-            <p className="text-sm text-black/40">
-              No client payments scheduled this week.
-            </p>
-          ) : (
-            <ul className="divide-y divide-black/[0.05] max-h-40 overflow-y-auto pr-1">
-              {income.rows.map((r) => (
-                <li key={r.id} className="flex items-center gap-3 py-2.5">
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ background: r.colorHex ?? "#cbd5e1" }}
-                  />
-                  <Link
-                    href={`/crm/${r.id}`}
-                    className="flex-1 min-w-0 hover:text-brand"
-                  >
-                    <span className="text-sm font-semibold text-ink block truncate">
-                      {r.companyName}
-                    </span>
-                    <span className="text-xs text-black/40">
-                      {payDateFmt(r.when)} · {FREQ_LABEL[r.frequency ?? ""] ?? "—"}
-                      {r.prorated && (
-                        <span className="ml-1 text-amber-600 font-semibold">· prorated</span>
-                      )}
-                    </span>
-                  </Link>
-                  <span className="text-sm font-bold text-ink tabular-nums shrink-0">
-                    {money(r.amount)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
-          <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Client Clocks</h3>
-          <WorldClocks />
-        </section>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: my tasks + projects */}
+        {/* Left: income + my tasks + projects */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Weekly income */}
+          <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-display text-2xl tracking-wide text-ink">
+                This Week&apos;s Income
+              </h3>
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink/45">
+                  Landing this week
+                </p>
+                <p className="font-display text-3xl tracking-wide text-brand leading-none">
+                  {money(income.total)}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-black/40 mb-4">
+              {payDateFmt(income.weekStart)} – {payDateFmt(income.weekEnd)}
+            </p>
+            {income.rows.length === 0 ? (
+              <p className="text-sm text-black/40">
+                No client payments scheduled this week.
+              </p>
+            ) : (
+              <ul className="divide-y divide-black/[0.05] max-h-40 overflow-y-auto pr-1">
+                {income.rows.map((r) => (
+                  <li key={r.id} className="flex items-center gap-3 py-2.5">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ background: r.colorHex ?? "#cbd5e1" }}
+                    />
+                    <Link
+                      href={`/crm/${r.id}`}
+                      className="flex-1 min-w-0 hover:text-brand"
+                    >
+                      <span className="text-sm font-semibold text-ink block truncate">
+                        {r.companyName}
+                      </span>
+                      <span className="text-xs text-black/40">
+                        {payDateFmt(r.when)} · {FREQ_LABEL[r.frequency ?? ""] ?? "—"}
+                        {r.prorated && (
+                          <span className="ml-1 text-amber-600 font-semibold">· prorated</span>
+                        )}
+                      </span>
+                    </Link>
+                    <span className="text-sm font-bold text-ink tabular-nums shrink-0">
+                      {money(r.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           {/* My open tasks */}
           <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
             <div className="flex items-center justify-between mb-4">
@@ -262,8 +255,13 @@ export default async function DashboardPage() {
           </section>
         </div>
 
-        {/* Right: health + activity */}
+        {/* Right: clocks + health + activity */}
         <div className="space-y-6">
+          <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
+            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Client Clocks</h3>
+            <WorldClocks />
+          </section>
+
           <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
             <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Client Health</h3>
             {d.atRiskClients.length === 0 ? (
