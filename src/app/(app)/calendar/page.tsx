@@ -16,6 +16,83 @@ const monthParam = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).p
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
+// A datetime-local input value ("YYYY-MM-DDTHH:mm") for `day` at `hour`.
+function toLocalInput(day: Date, hour: number): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}T${pad(hour)}:00`;
+}
+
+// Shared "New Event" fields — used by both the toolbar's blank New Event
+// modal and each day cell's pre-filled one, so the two never drift apart.
+function EventFormFields({
+  clients,
+  defaultStart,
+}: {
+  clients: { id: string; companyName: string }[];
+  defaultStart?: string;
+}) {
+  return (
+    <>
+      <div>
+        <label className={label}>Title *</label>
+        <input name="title" required autoFocus placeholder="Client kickoff call" className={input} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Type</label>
+          <select name="type" className={input} defaultValue="MEETING">
+            <option value="MEETING">Meeting</option>
+            <option value="CONTENT_PUBLISH">Content</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div>
+          <label className={label}>Client</label>
+          <select name="clientId" className={input} defaultValue="">
+            <option value="">—</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.companyName}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={label}>Start *</label>
+          <input
+            type="datetime-local"
+            name="start"
+            required
+            defaultValue={defaultStart}
+            className={input}
+          />
+        </div>
+        <div>
+          <label className={label}>End</label>
+          <input type="datetime-local" name="end" className={input} />
+        </div>
+      </div>
+      <div>
+        <label className={label}>Meeting link</label>
+        <input type="url" name="meetingUrl" placeholder="https://meet…" className={input} />
+      </div>
+      <div>
+        <label className={label}>Description</label>
+        <textarea name="description" rows={4} placeholder="Agenda, notes, context…" className={input} />
+      </div>
+      <label className="flex items-center gap-2 text-xs text-ink/60">
+        <input type="checkbox" name="allDay" className="accent-brand w-4 h-4" /> All day
+      </label>
+      <button
+        type="submit"
+        className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
+      >
+        Add Event
+      </button>
+    </>
+  );
+}
+
 export default async function CalendarPage({
   searchParams,
 }: {
@@ -70,61 +147,7 @@ export default async function CalendarPage({
           panelClassName="max-w-xl"
         >
           <form action={createEvent} className="space-y-4">
-            <div>
-              <label className={label}>Title *</label>
-              <input name="title" required autoFocus placeholder="Client kickoff call" className={input} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={label}>Type</label>
-                <select name="type" className={input} defaultValue="MEETING">
-                  <option value="MEETING">Meeting</option>
-                  <option value="CONTENT_PUBLISH">Content</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className={label}>Client</label>
-                <select name="clientId" className={input} defaultValue="">
-                  <option value="">—</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.companyName}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={label}>Start *</label>
-                <input type="datetime-local" name="start" required className={input} />
-              </div>
-              <div>
-                <label className={label}>End</label>
-                <input type="datetime-local" name="end" className={input} />
-              </div>
-            </div>
-            <div>
-              <label className={label}>Meeting link</label>
-              <input type="url" name="meetingUrl" placeholder="https://meet…" className={input} />
-            </div>
-            <div>
-              <label className={label}>Description</label>
-              <textarea
-                name="description"
-                rows={4}
-                placeholder="Agenda, notes, context…"
-                className={input}
-              />
-            </div>
-            <label className="flex items-center gap-2 text-xs text-ink/60">
-              <input type="checkbox" name="allDay" className="accent-brand w-4 h-4" /> All day
-            </label>
-            <button
-              type="submit"
-              className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
-            >
-              Add Event
-            </button>
+            <EventFormFields clients={clients} />
           </form>
         </AddModal>
       </div>
@@ -152,11 +175,28 @@ export default async function CalendarPage({
             return (
               <div
                 key={i}
-                className={`min-h-[104px] border-b border-r border-black/[0.05] p-1.5 ${
+                className={`relative min-h-[104px] border-b border-r border-black/[0.05] p-1.5 ${
                   inMonth ? "bg-white" : "bg-cream/40"
                 } ${i % 7 === 6 ? "border-r-0" : ""}`}
               >
-                <div className="flex justify-end">
+                {/* Click anywhere empty in this cell to add an event on this
+                    date. Sits behind the day number + pills (position:absolute
+                    stacks above position:static by default, so those need
+                    their own z-index to stay on top and remain independently
+                    clickable) — clicking a pill hits the pill, not this. */}
+                <AddModal
+                  title={day.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+                  trigger={null}
+                  triggerClassName="absolute inset-0 z-0 cursor-pointer"
+                  triggerAriaLabel={`Add event on ${day.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}`}
+                  panelClassName="max-w-xl"
+                >
+                  <form action={createEvent} className="space-y-4">
+                    <EventFormFields clients={clients} defaultStart={toLocalInput(day, 9)} />
+                  </form>
+                </AddModal>
+
+                <div className="relative z-10 flex justify-end">
                   <span
                     className={`text-[11px] font-semibold w-5 h-5 flex items-center justify-center rounded-full ${
                       isToday ? "bg-brand text-white" : inMonth ? "text-ink/60" : "text-ink/25"
@@ -165,7 +205,7 @@ export default async function CalendarPage({
                     {day.getDate()}
                   </span>
                 </div>
-                <div className="mt-0.5 space-y-0.5">
+                <div className="relative z-10 mt-0.5 space-y-0.5">
                   {shownEvents.map((e) => (
                     <EventItem key={`e-${e.id}`} event={e} clients={clients} variant="pill" />
                   ))}

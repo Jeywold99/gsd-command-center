@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Hash, MessageSquare, Trash2 } from "lucide-react";
+import { Plus, Hash, MessageSquare } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
 import { listChannels, getChannel, getMessages } from "@/lib/chat";
 import { listActiveClients, listUsers } from "@/lib/projects";
@@ -7,6 +7,7 @@ import { listProjectOptions } from "@/lib/time";
 import { createChannel, archiveChannel } from "./actions";
 import ChatRoom from "./_components/chat-room";
 import AddModal from "../_components/add-modal";
+import ConfirmDelete from "../_components/confirm-delete";
 
 const input =
   "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
@@ -133,18 +134,14 @@ export default async function ChatPage({
                             )}
                             <span className="truncate">{c.name}</span>
                           </Link>
-                          <form action={archiveChannel}>
-                            <input type="hidden" name="id" value={c.id} />
-                            <input type="hidden" name="currentChannel" value={selected?.id ?? ""} />
-                            <button
-                              type="submit"
-                              className="shrink-0 p-1.5 mr-1 rounded text-ink/25 hover:text-red-600 hover:bg-red-50 transition"
-                              title="Delete channel"
-                              aria-label={`Delete #${c.name}`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </form>
+                          <ConfirmDelete
+                            action={archiveChannel}
+                            fields={{ id: c.id, currentChannel: selected?.id ?? "" }}
+                            title={`Delete #${c.name}?`}
+                            description="This removes it from the channel list for everyone. It can't be undone from here."
+                            triggerClassName="shrink-0 p-1.5 mr-1 rounded text-ink/25 hover:text-red-600 hover:bg-red-50 transition"
+                            triggerTitle={`Delete #${c.name}`}
+                          />
                         </div>
                       );
                     })}

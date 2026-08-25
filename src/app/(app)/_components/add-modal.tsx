@@ -21,12 +21,17 @@ import { X } from "lucide-react";
 export default function AddModal({
   trigger,
   triggerClassName,
+  triggerAriaLabel,
   title,
   panelClassName,
   children,
 }: {
   trigger: ReactNode;
   triggerClassName?: string;
+  // Needed when `trigger` has no text content (e.g. an invisible full-cell
+  // click target) — otherwise the button announces to screen readers as
+  // unlabeled.
+  triggerAriaLabel?: string;
   title: string;
   panelClassName?: string;
   children: ReactNode;
@@ -44,7 +49,12 @@ export default function AddModal({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={triggerClassName}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={triggerClassName}
+        aria-label={triggerAriaLabel}
+      >
         {trigger}
       </button>
 
