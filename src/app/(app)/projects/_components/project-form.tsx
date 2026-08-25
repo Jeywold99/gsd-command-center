@@ -24,11 +24,13 @@ export default function ProjectForm({
   mode,
   clients,
   defaults = {},
+  cancelHref,
 }: {
   action: (state: ClientFormState, formData: FormData) => Promise<ClientFormState>;
   mode: "create" | "edit";
   clients: { id: string; companyName: string }[];
   defaults?: Defaults;
+  cancelHref?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
 
@@ -101,7 +103,7 @@ export default function ProjectForm({
           {pending ? "Saving…" : mode === "create" ? "Create Project →" : "Save Changes"}
         </button>
         <Link
-          href={mode === "edit" && defaults.id ? `/projects/${defaults.id}` : "/projects"}
+          href={cancelHref ?? (mode === "edit" && defaults.id ? `/projects/${defaults.id}` : "/projects")}
           className="text-sm font-semibold text-ink/50 hover:text-ink"
         >
           Cancel

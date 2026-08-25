@@ -33,11 +33,11 @@ export default async function ProjectDetailPage({
   return (
     <div className="space-y-6">
       <Link
-        href="/projects"
+        href={`/projects/client/${project.client?.id ?? "internal"}`}
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Projects
+        Back to {project.client ? project.client.companyName : "Internal Projects"}
       </Link>
 
       {/* Header */}
