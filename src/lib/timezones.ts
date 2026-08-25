@@ -3,7 +3,9 @@
 // abbreviations the team actually uses (EST / MST / PDT).
 export const TIMEZONES = [
   { value: "America/New_York", label: "EST — Eastern", short: "EST" },
-  { value: "America/Denver", label: "MST — Mountain", short: "MST" },
+  // Arizona doesn't observe DST, so it's MST year-round (unlike the rest of
+  // the Mountain zone, which drifts to MDT for most of the year).
+  { value: "America/Phoenix", label: "MST — Arizona", short: "MST" },
   { value: "America/Los_Angeles", label: "PDT — Pacific", short: "PDT" },
 ] as const;
 
