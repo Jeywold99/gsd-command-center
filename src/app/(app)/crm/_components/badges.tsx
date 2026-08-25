@@ -31,14 +31,28 @@ export function StageLabel({ stage }: { stage: string }) {
   return <>{STAGE[stage] ?? stage}</>;
 }
 
-export function HealthDot({ health }: { health: string | null }) {
-  if (!health) return null;
+// health is auto-computed unless the client has a manual override set (see
+// lib/health.ts) — reasons show on hover via the title attribute so the flag
+// is never a mystery.
+export function HealthDot({
+  health,
+  reasons,
+  isOverride,
+}: {
+  health: string;
+  reasons?: string[];
+  isOverride?: boolean;
+}) {
   const color =
     health === "GREEN" ? "bg-success" : health === "YELLOW" ? "bg-amber-400" : "bg-red-500";
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-black/50">
+    <span
+      className="inline-flex items-center gap-1.5 text-xs text-black/50"
+      title={reasons?.join(" · ")}
+    >
       <span className={`w-2 h-2 rounded-full ${color}`} />
       {health.charAt(0) + health.slice(1).toLowerCase()}
+      {!isOverride && <span className="text-[9px] text-black/30 uppercase tracking-wide">Auto</span>}
     </span>
   );
 }

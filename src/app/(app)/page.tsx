@@ -275,7 +275,11 @@ export default async function DashboardPage() {
               <ul className="space-y-2.5">
                 {d.atRiskClients.map((c) => (
                   <li key={c.id}>
-                    <Link href={`/crm/${c.id}`} className="flex items-center gap-2.5 text-sm hover:text-brand">
+                    <Link
+                      href={`/crm/${c.id}`}
+                      className="flex items-center gap-2.5 text-sm hover:text-brand"
+                      title={c.reasons.join(" · ")}
+                    >
                       <span
                         className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                           c.health === "RED" ? "bg-red-500" : "bg-amber-400"

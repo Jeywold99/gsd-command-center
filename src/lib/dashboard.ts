@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "./prisma";
+import { computeClientHealthMap } from "./health";
 
 export async function getDashboardData(userId: string) {
   const now = new Date();
@@ -12,7 +13,8 @@ export async function getDashboardData(userId: string) {
     myOpenTasks,
     recentNotes,
     activeProjectList,
-    atRiskClients,
+    atRiskCandidates,
+    healthMap,
   ] = await Promise.all([
     prisma.client.count({ where: { status: "ACTIVE" } }),
     prisma.client.count({ where: { status: "LEAD" } }),
@@ -66,12 +68,20 @@ export async function getDashboardData(userId: string) {
       },
     }),
     prisma.client.findMany({
-      where: { status: "ACTIVE", health: { in: ["RED", "YELLOW"] } },
-      orderBy: { health: "asc" },
-      take: 5,
-      select: { id: true, companyName: true, health: true, colorHex: true },
+      where: { status: "ACTIVE" },
+      select: { id: true, companyName: true, colorHex: true },
     }),
+    computeClientHealthMap(),
   ]);
+
+  const atRiskClients = atRiskCandidates
+    .map((c) => {
+      const h = healthMap.get(c.id);
+      return h && h.health !== "GREEN" ? { ...c, health: h.health, reasons: h.reasons } : null;
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+    .sort((a, b) => (a.health === b.health ? 0 : a.health === "RED" ? -1 : 1))
+    .slice(0, 5);
 
   return {
     activeClients,

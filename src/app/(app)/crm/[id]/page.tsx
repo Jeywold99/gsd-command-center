@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, ExternalLink, Plus } from "lucide-react";
 import { getClientById } from "@/lib/crm";
+import { computeClientHealthMap } from "@/lib/health";
 import { StatusBadge, HealthDot, StageLabel, fmtDate } from "../_components/badges";
 import BillingRateForm from "../_components/rate-form";
 import ClientClock from "../_components/client-clock";
@@ -42,11 +43,12 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const client = await getClientById(id);
+  const [client, healthMap] = await Promise.all([getClientById(id), computeClientHealthMap()]);
   if (!client) notFound();
 
   const isLead = client.status === "LEAD";
   const currentRate = client.billingRates[0];
+  const health = healthMap.get(client.id); // undefined for leads/churned — not scored
 
   return (
     <div className="space-y-6">
@@ -78,7 +80,9 @@ export default async function ClientDetailPage({
                   Stage: <StageLabel stage={client.pipelineStage} />
                 </span>
               )}
-              <HealthDot health={client.health} />
+              {health && (
+                <HealthDot health={health.health} reasons={health.reasons} isOverride={health.isOverride} />
+              )}
               {client.serviceType && (
                 <span className="text-xs text-black/50">· {client.serviceType}</span>
               )}

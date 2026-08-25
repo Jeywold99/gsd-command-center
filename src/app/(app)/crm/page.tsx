@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Plus, Building2 } from "lucide-react";
 import { listClients, listLeads, listChurnedClients } from "@/lib/crm";
-import { StatusBadge, StageLabel, PIPELINE_STAGES, fmtDate } from "./_components/badges";
+import { computeClientHealthMap, type ComputedHealth } from "@/lib/health";
+import { StatusBadge, HealthDot, StageLabel, PIPELINE_STAGES, fmtDate } from "./_components/badges";
 import ClientClock from "./_components/client-clock";
 
 function rateOf(
@@ -20,7 +21,13 @@ function rateOf(
 
 type ClientRow = Awaited<ReturnType<typeof listClients>>[number];
 
-function ClientsTable({ clients }: { clients: ClientRow[] }) {
+function ClientsTable({
+  clients,
+  healthMap,
+}: {
+  clients: ClientRow[];
+  healthMap?: Map<string, ComputedHealth>;
+}) {
   return (
     <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
       <div className="overflow-x-auto">
@@ -29,6 +36,7 @@ function ClientsTable({ clients }: { clients: ClientRow[] }) {
             <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-ink/45 border-b border-black/[0.07]">
               <th className="px-5 py-3">Company</th>
               <th className="px-5 py-3">Status</th>
+              {healthMap && <th className="px-5 py-3">Health</th>}
               <th className="px-5 py-3">Service</th>
               <th className="px-5 py-3">Primary Contact</th>
               <th className="px-5 py-3">Rate</th>
@@ -38,31 +46,43 @@ function ClientsTable({ clients }: { clients: ClientRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {clients.map((c) => (
-              <tr
-                key={c.id}
-                className="border-b border-black/[0.05] last:border-0 hover:bg-cream/60 transition"
-              >
-                <td className="px-5 py-3">
-                  <Link href={`/crm/${c.id}`} className="font-bold text-ink hover:text-brand flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ background: c.colorHex ?? "#cbd5e1" }}
-                    />
-                    {c.companyName}
-                  </Link>
-                </td>
-                <td className="px-5 py-3"><StatusBadge status={c.status} /></td>
-                <td className="px-5 py-3 text-black/60">{c.serviceType ?? "—"}</td>
-                <td className="px-5 py-3 text-black/60">{c.contacts[0]?.name ?? "—"}</td>
-                <td className="px-5 py-3 text-black/60">{rateOf(c.billingRates)}</td>
-                <td className="px-5 py-3 text-sm">
-                  <ClientClock timezone={c.timezone} />
-                </td>
-                <td className="px-5 py-3 text-black/60">{c._count.projects}</td>
-                <td className="px-5 py-3 text-black/60">{fmtDate(c.renewalDate)}</td>
-              </tr>
-            ))}
+            {clients.map((c) => {
+              const health = healthMap?.get(c.id);
+              return (
+                <tr
+                  key={c.id}
+                  className="border-b border-black/[0.05] last:border-0 hover:bg-cream/60 transition"
+                >
+                  <td className="px-5 py-3">
+                    <Link href={`/crm/${c.id}`} className="font-bold text-ink hover:text-brand flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ background: c.colorHex ?? "#cbd5e1" }}
+                      />
+                      {c.companyName}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-3"><StatusBadge status={c.status} /></td>
+                  {healthMap && (
+                    <td className="px-5 py-3">
+                      {health ? (
+                        <HealthDot health={health.health} reasons={health.reasons} isOverride={health.isOverride} />
+                      ) : (
+                        <span className="text-black/25">—</span>
+                      )}
+                    </td>
+                  )}
+                  <td className="px-5 py-3 text-black/60">{c.serviceType ?? "—"}</td>
+                  <td className="px-5 py-3 text-black/60">{c.contacts[0]?.name ?? "—"}</td>
+                  <td className="px-5 py-3 text-black/60">{rateOf(c.billingRates)}</td>
+                  <td className="px-5 py-3 text-sm">
+                    <ClientClock timezone={c.timezone} />
+                  </td>
+                  <td className="px-5 py-3 text-black/60">{c._count.projects}</td>
+                  <td className="px-5 py-3 text-black/60">{fmtDate(c.renewalDate)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -78,10 +98,11 @@ export default async function CrmPage({
   const { tab } = await searchParams;
   const view = tab === "leads" ? "leads" : tab === "churned" ? "churned" : "clients";
 
-  const [clients, leads, churned] = await Promise.all([
+  const [clients, leads, churned, healthMap] = await Promise.all([
     listClients(),
     listLeads(),
     listChurnedClients(),
+    computeClientHealthMap(),
   ]);
 
   const tabCls = (active: boolean) =>
@@ -169,7 +190,7 @@ export default async function CrmPage({
       ) : /* ── CLIENTS TABLE ── */ clients.length === 0 ? (
         <EmptyState label="No clients yet. Add your first client to get started." />
       ) : (
-        <ClientsTable clients={clients} />
+        <ClientsTable clients={clients} healthMap={healthMap} />
       )}
     </div>
   );

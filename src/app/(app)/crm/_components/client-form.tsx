@@ -134,10 +134,10 @@ export default function ClientForm({
         <div>
           <label className={label}>Health</label>
           <select name="health" className={input} defaultValue={defaults.health ?? ""}>
-            <option value="">—</option>
-            <option value="GREEN">Green</option>
-            <option value="YELLOW">Yellow</option>
-            <option value="RED">Red</option>
+            <option value="">Auto (computed from activity)</option>
+            <option value="GREEN">Override: Green</option>
+            <option value="YELLOW">Override: Yellow</option>
+            <option value="RED">Override: Red</option>
           </select>
         </div>
 
