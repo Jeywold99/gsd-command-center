@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Plus, Hash, MessageSquare } from "lucide-react";
+import { Plus, Hash, MessageSquare, Trash2 } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
 import { listChannels, getChannel, getMessages } from "@/lib/chat";
 import { listActiveClients, listUsers } from "@/lib/projects";
 import { listProjectOptions } from "@/lib/time";
-import { createChannel } from "./actions";
+import { createChannel, archiveChannel } from "./actions";
 import ChatRoom from "./_components/chat-room";
 import AddModal from "../_components/add-modal";
 
@@ -114,20 +114,38 @@ export default async function ChatPage({
                     {g.items.map((c) => {
                       const active = c.id === selected?.id;
                       return (
-                        <Link
+                        <div
                           key={c.id}
-                          href={`/chat?channel=${c.id}`}
-                          className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition ${
-                            active ? "bg-brand/15 text-ink font-semibold" : "text-ink/60 hover:bg-cream"
+                          className={`flex items-center gap-1 rounded-lg text-sm transition ${
+                            active ? "bg-brand/15" : "hover:bg-cream"
                           }`}
                         >
-                          {c.client?.colorHex ? (
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.client.colorHex }} />
-                          ) : (
-                            <Hash className="w-3.5 h-3.5 shrink-0 text-ink/35" />
-                          )}
-                          <span className="truncate">{c.name}</span>
-                        </Link>
+                          <Link
+                            href={`/chat?channel=${c.id}`}
+                            className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 ${
+                              active ? "text-ink font-semibold" : "text-ink/60"
+                            }`}
+                          >
+                            {c.client?.colorHex ? (
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.client.colorHex }} />
+                            ) : (
+                              <Hash className="w-3.5 h-3.5 shrink-0 text-ink/35" />
+                            )}
+                            <span className="truncate">{c.name}</span>
+                          </Link>
+                          <form action={archiveChannel}>
+                            <input type="hidden" name="id" value={c.id} />
+                            <input type="hidden" name="currentChannel" value={selected?.id ?? ""} />
+                            <button
+                              type="submit"
+                              className="shrink-0 p-1.5 mr-1 rounded text-ink/25 hover:text-red-600 hover:bg-red-50 transition"
+                              title="Delete channel"
+                              aria-label={`Delete #${c.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </form>
+                        </div>
                       );
                     })}
                   </div>

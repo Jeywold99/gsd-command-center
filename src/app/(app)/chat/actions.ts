@@ -27,13 +27,20 @@ export async function createChannel(formData: FormData) {
   redirect(`/chat?channel=${channel.id}`);
 }
 
+// Soft-delete: hides the channel (listChannels excludes isArchived) but keeps
+// its messages, matching how the rest of the app retires records (clients →
+// churned, projects/tasks → archived) rather than destroying history.
 export async function archiveChannel(formData: FormData) {
   await verifySession();
   const id = str(formData.get("id"));
   if (!id) return;
   await prisma.channel.update({ where: { id }, data: { isArchived: true } });
   revalidatePath("/chat");
-  redirect("/chat");
+  // Only navigate away if the deleted channel is the one currently open —
+  // deleting a different channel from the sidebar shouldn't interrupt an
+  // active conversation.
+  const current = str(formData.get("currentChannel"));
+  if (current === id) redirect("/chat");
 }
 
 // Create a calendar event from a date detected in a chat message.

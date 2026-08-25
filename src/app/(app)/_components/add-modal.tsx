@@ -7,9 +7,17 @@ import { X } from "lucide-react";
 // corner dropdown, which anchored to its trigger button and had to stay small
 // to avoid clipping off-screen. This has the whole viewport to work with.
 //
-// Closes on: the backdrop, the X button, Escape, or submitting a form inside
-// (capture-phase — fires once native required-field validation has already
-// passed, same moment a <details> popover would've closed).
+// Closes on: the backdrop, the X button, Escape, or submitting a form inside.
+//
+// The submit-close MUST be a bubble-phase onSubmit, not onSubmitCapture. A
+// capture-phase handler on an ancestor fires before the form's own submit
+// handling reaches the target — which is where React's action dispatch for
+// `<form action={serverAction}>` actually lives. Closing (and unmounting the
+// form) there pre-empts the dispatch entirely: no request is ever sent, and
+// for an action that calls `redirect()` (e.g. createChannel, quickAddTask)
+// the whole operation silently does nothing. Confirmed via a live repro:
+// onSubmitCapture -> zero network requests fired; onSubmit -> the action's
+// POST fires and its redirect completes normally.
 export default function AddModal({
   trigger,
   triggerClassName,
@@ -50,7 +58,7 @@ export default function AddModal({
           <div
             className={`w-full rounded-2xl bg-white shadow-2xl ${panelClassName ?? "max-w-lg"}`}
             onClick={(e) => e.stopPropagation()}
-            onSubmitCapture={() => setOpen(false)}
+            onSubmit={() => setOpen(false)}
           >
             <div className="flex items-center justify-between gap-3 border-b border-black/[0.07] px-6 py-4">
               <h2 className="font-display text-2xl tracking-wide text-ink">{title}</h2>
