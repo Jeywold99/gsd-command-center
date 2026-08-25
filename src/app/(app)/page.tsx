@@ -113,7 +113,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Weekly income + client clocks */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         <section className="lg:col-span-2 bg-white rounded-2xl border border-black/[0.07] p-6">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-display text-2xl tracking-wide text-ink">
