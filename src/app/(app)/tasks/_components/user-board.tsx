@@ -14,7 +14,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Repeat } from "lucide-react";
 import { COLUMNS, PRIORITY, initials, fmtDate } from "../../projects/_components/task-badges";
 import { moveTaskStatus } from "../../projects/actions";
 
@@ -24,6 +24,7 @@ type BoardTask = {
   status: string;
   priority: string;
   dueDate: Date | string | null;
+  recurrence?: string | null;
   project: { id: string; name: string; client: { companyName: string; colorHex: string | null } | null } | null;
   assignees: { user: { id: string; name: string } }[];
 };
@@ -45,7 +46,14 @@ function CardBody({ task }: { task: BoardTask }) {
   const p = PRIORITY[task.priority] ?? PRIORITY.MEDIUM;
   return (
     <>
-      <p className="text-sm font-semibold text-ink leading-snug">{task.title}</p>
+      <p className="text-sm font-semibold text-ink leading-snug flex items-center gap-1.5">
+        {task.recurrence && (
+          <span title="Repeats" className="shrink-0">
+            <Repeat className="w-3 h-3 text-black/35" />
+          </span>
+        )}
+        {task.title}
+      </p>
       <p className="mt-1 text-[11px] text-black/45 truncate">
         {task.project ? (
           <>

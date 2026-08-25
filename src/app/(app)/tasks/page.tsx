@@ -189,6 +189,21 @@ export default async function TasksPage({
                   <input type="date" name="dueDate" className={input} />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={label}>Repeats</label>
+                  <select name="recurrence" defaultValue="" className={input}>
+                    <option value="">Never</option>
+                    <option value="DAILY">Daily</option>
+                    <option value="WEEKLY">Weekly</option>
+                    <option value="MONTHLY">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>Every</label>
+                  <input type="number" name="recurrenceInterval" min="1" defaultValue={1} className={input} />
+                </div>
+              </div>
               <div>
                 <label className={label}>Notes</label>
                 <textarea

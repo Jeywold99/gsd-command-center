@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CalendarClock, GitBranch, Flag, CheckCircle2 } from "lucide-react";
+import { CalendarClock, GitBranch, Flag, CheckCircle2, Repeat } from "lucide-react";
 import { COLUMNS, PRIORITY, initials, fmtDate } from "./task-badges";
 import { createTask, moveTask } from "../actions";
 
@@ -33,6 +33,7 @@ export type BoardTask = {
   priority: string;
   dueDate: Date | string | null;
   milestoneId: string | null;
+  recurrence?: string | null;
   assignees: Assignee[];
   _count: { subtasks: number };
 };
@@ -80,7 +81,14 @@ function CardBody({ task }: { task: BoardTask }) {
   const p = PRIORITY[task.priority] ?? PRIORITY.MEDIUM;
   return (
     <>
-      <p className="text-sm font-semibold text-ink leading-snug">{task.title}</p>
+      <p className="text-sm font-semibold text-ink leading-snug flex items-center gap-1.5">
+        {task.recurrence && (
+          <span title="Repeats" className="shrink-0">
+            <Repeat className="w-3 h-3 text-black/35" />
+          </span>
+        )}
+        {task.title}
+      </p>
       <div className="mt-2 flex items-center justify-between">
         <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${p.cls}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${p.dot}`} />

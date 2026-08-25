@@ -93,6 +93,12 @@ enum Priority {
   URGENT
 }
 
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 enum ChannelScope {
   GENERAL
   CLIENT
@@ -363,6 +369,11 @@ model Task {
   // Archived tasks are hidden from the active task views (restorable).
   isArchived  Boolean    @default(false)
   completedAt DateTime?
+  // When set, completing this task spins up its next occurrence (see
+  // lib/recurrence.ts) instead of just sitting done. Interval defaults to 1
+  // (every day/week/month) when null.
+  recurrence         RecurrenceFrequency?
+  recurrenceInterval Int?
   createdById String?
   createdBy   User?      @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime   @default(now())

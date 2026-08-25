@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { verifySession, requireRole } from "@/lib/dal";
 import { notifyMany } from "@/lib/notifications";
 import { saveFile } from "@/lib/storage";
+import { regenerateIfRecurring } from "@/lib/recurrence";
 import { str, date } from "@/lib/forms";
 import type { ClientFormState } from "@/lib/definitions";
 
@@ -123,6 +124,7 @@ export async function createTask(
 // per-project column re-indexing doesn't apply).
 export async function moveTaskStatus(taskId: string, status: string) {
   await verifySession();
+  const before = await prisma.task.findUnique({ where: { id: taskId }, select: { status: true } });
   await prisma.task.update({
     where: { id: taskId },
     data: {
@@ -130,6 +132,7 @@ export async function moveTaskStatus(taskId: string, status: string) {
       completedAt: status === "DONE" ? new Date() : null,
     },
   });
+  if (status === "DONE" && before?.status !== "DONE") await regenerateIfRecurring(taskId);
   revalidatePath("/tasks");
 }
 
@@ -144,6 +147,7 @@ export async function moveTask(
   milestoneId?: string | null,
 ) {
   await verifySession();
+  const before = await prisma.task.findUnique({ where: { id: taskId }, select: { status: true } });
   const data: { status: never; completedAt: Date | null; milestoneId?: string | null } = {
     status: status as never,
     completedAt: status === "DONE" ? new Date() : null,
@@ -155,6 +159,7 @@ export async function moveTask(
       prisma.task.update({ where: { id }, data: { position: i } }),
     ),
   ]);
+  if (status === "DONE" && before?.status !== "DONE") await regenerateIfRecurring(taskId);
 }
 
 // ── Task detail edits (server-rendered task page → revalidate) ──
@@ -164,19 +169,27 @@ export async function updateTask(formData: FormData) {
   const projectId = str(formData.get("projectId"));
   const title = str(formData.get("title"));
   if (!id || !title) return;
+  const before = await prisma.task.findUnique({ where: { id }, select: { status: true } });
+  const newStatus = (str(formData.get("status")) as never) ?? "TODO";
+  const recurrence = str(formData.get("recurrence"));
+  const intervalRaw = str(formData.get("recurrenceInterval"));
+  const interval = intervalRaw ? parseInt(intervalRaw, 10) : NaN;
   await prisma.task.update({
     where: { id },
     data: {
       title,
       description: str(formData.get("description")),
-      status: (str(formData.get("status")) as never) ?? "TODO",
+      status: newStatus,
       priority: (str(formData.get("priority")) as never) ?? "MEDIUM",
       dueDate: date(formData.get("dueDate")),
       startDate: date(formData.get("startDate")),
       milestoneId: str(formData.get("milestoneId")),
-      completedAt: str(formData.get("status")) === "DONE" ? new Date() : null,
+      recurrence: (recurrence as never) ?? null,
+      recurrenceInterval: recurrence && !isNaN(interval) && interval > 0 ? interval : null,
+      completedAt: newStatus === "DONE" ? new Date() : null,
     },
   });
+  if (newStatus === "DONE" && before?.status !== "DONE") await regenerateIfRecurring(id);
   // Preserve where the user came from (global Tasks board vs project board).
   const fromTasks = str(formData.get("from")) === "tasks";
   if (projectId) revalidatePath(`/projects/${projectId}`);
@@ -421,6 +434,10 @@ export async function quickAddTask(formData: FormData) {
     _max: { position: true },
   });
 
+  const recurrence = str(formData.get("recurrence"));
+  const intervalRaw = str(formData.get("recurrenceInterval"));
+  const interval = intervalRaw ? parseInt(intervalRaw, 10) : NaN;
+
   const task = await prisma.task.create({
     data: {
       title,
@@ -429,6 +446,8 @@ export async function quickAddTask(formData: FormData) {
       priority: (str(formData.get("priority")) as never) ?? "MEDIUM",
       description: str(formData.get("description")),
       dueDate: date(formData.get("dueDate")),
+      recurrence: recurrence as never,
+      recurrenceInterval: recurrence && !isNaN(interval) && interval > 0 ? interval : null,
       position: (max._max.position ?? 0) + 1,
       createdById: session.userId,
     },

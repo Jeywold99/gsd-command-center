@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trash2, Bell } from "lucide-react";
+import { ArrowLeft, Trash2, Bell, Repeat } from "lucide-react";
 import { getTask, listUsers } from "@/lib/projects";
 import {
   updateTask,
@@ -148,6 +148,41 @@ export default async function TaskPage({
                   <input type="date" name="dueDate" form="task-edit" defaultValue={dueInput} className={input} />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`${label} flex items-center gap-1`}>
+                    <Repeat className="w-3 h-3" />
+                    Repeats
+                  </label>
+                  <select
+                    name="recurrence"
+                    form="task-edit"
+                    defaultValue={task.recurrence ?? ""}
+                    className={input}
+                  >
+                    <option value="">Never</option>
+                    <option value="DAILY">Daily</option>
+                    <option value="WEEKLY">Weekly</option>
+                    <option value="MONTHLY">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={label}>Every</label>
+                  <input
+                    type="number"
+                    name="recurrenceInterval"
+                    form="task-edit"
+                    min="1"
+                    defaultValue={task.recurrenceInterval ?? 1}
+                    className={input}
+                  />
+                </div>
+              </div>
+              {task.recurrence && (
+                <p className="text-[11px] text-black/40 -mt-2">
+                  Completing this task creates the next occurrence automatically.
+                </p>
+              )}
               <button
                 type="submit"
                 form="task-edit"
