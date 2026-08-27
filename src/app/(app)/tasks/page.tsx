@@ -219,12 +219,20 @@ export default async function TasksPage({
               </div>
               <div>
                 <label className={label}>Assign to</label>
-                <select name="assigneeIds" multiple defaultValue={[session.userId]} className={`${input} h-24`}>
+                <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto rounded-lg border border-black/10 p-2.5">
                   {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
+                    <label key={u.id} className="flex items-center gap-2 text-sm text-ink/80 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="assigneeIds"
+                        value={u.id}
+                        defaultChecked={u.id === session.userId}
+                        className="accent-brand w-4 h-4 shrink-0"
+                      />
+                      <span className="truncate">{u.name}</span>
+                    </label>
                   ))}
-                </select>
-                <p className="text-[10px] text-black/40 mt-1">Hold Ctrl/Cmd to pick more than one.</p>
+                </div>
               </div>
               <button
                 type="submit"

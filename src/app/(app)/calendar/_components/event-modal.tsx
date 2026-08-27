@@ -206,19 +206,21 @@ export default function EventModal({
             </div>
             <div>
               <label className={label}>Participants</label>
-              <select
-                name="attendeeIds"
-                multiple
-                defaultValue={event.attendees.map((a) => a.user.id)}
-                className={`${input} h-24`}
-              >
+              <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto rounded-lg border border-black/10 p-2.5">
                 {users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
+                  <label key={u.id} className="flex items-center gap-2 text-sm text-ink/80 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="attendeeIds"
+                      value={u.id}
+                      defaultChecked={event.attendees.some((a) => a.user.id === u.id)}
+                      className="accent-brand w-4 h-4 shrink-0"
+                    />
+                    <span className="truncate">{u.name}</span>
+                  </label>
                 ))}
-              </select>
-              <p className="text-[10px] text-black/40 mt-1">
-                Hold Ctrl/Cmd to pick more than one. Shows up on their calendar too.
-              </p>
+              </div>
+              <p className="text-[10px] text-black/40 mt-1">Shows up on their calendar too.</p>
             </div>
             <label className="flex items-center gap-2 text-xs text-ink/60">
               <input

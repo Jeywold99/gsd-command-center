@@ -90,13 +90,22 @@ function EventFormFields({
       </div>
       <div>
         <label className={label}>Participants</label>
-        <select name="attendeeIds" multiple defaultValue={defaultAttendeeIds} className={`${input} h-24`}>
+        <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto rounded-lg border border-black/10 p-2.5">
           {users.map((u) => (
-            <option key={u.id} value={u.id}>{u.name}</option>
+            <label key={u.id} className="flex items-center gap-2 text-sm text-ink/80 cursor-pointer">
+              <input
+                type="checkbox"
+                name="attendeeIds"
+                value={u.id}
+                defaultChecked={defaultAttendeeIds.includes(u.id)}
+                className="accent-brand w-4 h-4 shrink-0"
+              />
+              <span className="truncate">{u.name}</span>
+            </label>
           ))}
-        </select>
+        </div>
         <p className="text-[10px] text-black/40 mt-1">
-          Hold Ctrl/Cmd to pick more than one. Shows up on their calendar too — you&apos;re always included.
+          Shows up on their calendar too — you&apos;re always included.
         </p>
       </div>
       <label className="flex items-center gap-2 text-xs text-ink/60">
