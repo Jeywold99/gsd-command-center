@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Trash2, Pencil, Video, X, Calendar, Building2 } from "lucide-react";
+import { Trash2, Pencil, Video, X, Calendar, Building2, Users } from "lucide-react";
 import { updateEvent, deleteEvent } from "../actions";
 import { announceSaved } from "../../_components/saved-toast";
 
@@ -20,10 +20,13 @@ export type CalEvent = {
   location: string | null;
   meetingUrl: string | null;
   clientId: string | null;
+  createdById: string;
   client: { id: string; companyName: string; colorHex: string | null } | null;
+  attendees: { user: { id: string; name: string } }[];
 };
 
 export type ClientOpt = { id: string; companyName: string };
+export type UserOpt = { id: string; name: string };
 
 // A datetime-local input value ("YYYY-MM-DDTHH:mm") in the viewer's local time.
 function toLocalInput(d: Date | string | null): string {
@@ -73,10 +76,12 @@ function whenLabel(e: CalEvent): string {
 export default function EventModal({
   event,
   clients,
+  users,
   onClose,
 }: {
   event: CalEvent;
   clients: ClientOpt[];
+  users: UserOpt[];
   onClose: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -199,6 +204,22 @@ export default function EventModal({
                 className={input}
               />
             </div>
+            <div>
+              <label className={label}>Participants</label>
+              <select
+                name="attendeeIds"
+                multiple
+                defaultValue={event.attendees.map((a) => a.user.id)}
+                className={`${input} h-24`}
+              >
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-black/40 mt-1">
+                Hold Ctrl/Cmd to pick more than one. Shows up on their calendar too.
+              </p>
+            </div>
             <label className="flex items-center gap-2 text-xs text-ink/60">
               <input
                 type="checkbox"
@@ -242,6 +263,26 @@ export default function EventModal({
               </div>
               {event.location && (
                 <p className="text-ink/70 pl-6.5">{event.location}</p>
+              )}
+              {event.attendees.length > 0 && (
+                <div className="flex items-start gap-2.5">
+                  <Users className="w-4 h-4 text-ink/40 shrink-0 mt-0.5" />
+                  <div className="flex flex-wrap gap-1">
+                    {event.attendees.map((a) => (
+                      <span
+                        key={a.user.id}
+                        className={`text-xs rounded-full px-2 py-0.5 ${
+                          a.user.id === event.createdById
+                            ? "bg-brand-pale text-brand font-semibold"
+                            : "bg-cream text-ink/70"
+                        }`}
+                      >
+                        {a.user.name}
+                        {a.user.id === event.createdById ? " (organizer)" : ""}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 

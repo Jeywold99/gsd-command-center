@@ -1,13 +1,16 @@
 import EventItem from "./event-item";
-import type { CalEvent, ClientOpt } from "./event-modal";
+import type { CalEvent, ClientOpt, UserOpt } from "./event-modal";
 
-// Agenda list under the month grid. Each row opens the details/edit modal.
+// Agenda grid under the month view. Each square card opens the details/edit
+// modal and shows enough at a glance to skip opening it for the routine case.
 export default function EventList({
   events,
   clients,
+  users,
 }: {
   events: CalEvent[];
   clients: ClientOpt[];
+  users: UserOpt[];
 }) {
   if (events.length === 0) {
     return (
@@ -17,9 +20,9 @@ export default function EventList({
     );
   }
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.07] divide-y divide-black/[0.05]">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
       {events.map((e) => (
-        <EventItem key={e.id} event={e} clients={clients} variant="row" />
+        <EventItem key={e.id} event={e} clients={clients} users={users} variant="card" />
       ))}
     </div>
   );
