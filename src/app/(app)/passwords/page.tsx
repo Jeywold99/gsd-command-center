@@ -1,59 +1,46 @@
 import Link from "next/link";
-import { Plus, KeyRound, ShieldCheck } from "lucide-react";
-import { verifySession } from "@/lib/dal";
-import { listCredentials } from "@/lib/passwords";
+import { Plus, KeyRound, ShieldCheck, Archive, ArrowLeft } from "lucide-react";
+import { listClientsWithCredentials, listChurnedClientCredentials } from "@/lib/passwords";
 import { listActiveClients } from "@/lib/projects";
 import { createCredential } from "./actions";
 import CredentialForm from "./_components/credential-form";
 import CredentialCard from "./_components/credential-card";
+import ClientDirectory from "./_components/client-directory";
 import AddModal from "../_components/add-modal";
 
 export default async function PasswordsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ scope?: string }>;
+  searchParams: Promise<{ show?: string }>;
 }) {
-  await verifySession();
-  const { scope } = await searchParams;
-  const view = scope === "internal" ? "internal" : scope === "client" ? "client" : "all";
-
-  const [all, clients] = await Promise.all([listCredentials(), listActiveClients()]);
-  const internal = all.filter((c) => c.scope === "INTERNAL");
-  const clientCreds = all.filter((c) => c.scope === "CLIENT");
-  const shown = view === "internal" ? internal : view === "client" ? clientCreds : all;
-
-  const tabCls = (active: boolean) =>
-    `px-4 py-2 rounded-full text-sm font-bold transition ${
-      active ? "bg-midnight text-white" : "text-ink/60 hover:text-ink"
-    }`;
+  const { show } = await searchParams;
+  const showChurned = show === "churned";
 
   return (
     <div className="space-y-6">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="inline-flex rounded-full bg-cream border border-black/10 p-1">
-          <Link href="/passwords" className={tabCls(view === "all")}>
-            All ({all.length})
+      <div className="flex items-center justify-between gap-3">
+        {showChurned ? (
+          <Link
+            href="/passwords"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to clients
           </Link>
-          <Link href="/passwords?scope=internal" className={tabCls(view === "internal")}>
-            Internal ({internal.length})
+        ) : (
+          <Link
+            href="/passwords?show=churned"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink/40 hover:text-ink"
+          >
+            <Archive className="w-3.5 h-3.5" />
+            Churned clients
           </Link>
-          <Link href="/passwords?scope=client" className={tabCls(view === "client")}>
-            Client ({clientCreds.length})
-          </Link>
-        </div>
+        )}
 
-        <AddModal
-          title="New Password"
-          triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
-          trigger={
-            <>
-              <Plus className="w-4 h-4" /> New Password
-            </>
-          }
-        >
-          <CredentialForm action={createCredential} mode="create" clients={clients} />
-        </AddModal>
+        {!showChurned && (
+          <AddModalTrigger />
+        )}
       </div>
 
       {/* Security note */}
@@ -63,23 +50,114 @@ export default async function PasswordsPage({
         across the team — anyone signed in can view them.
       </div>
 
-      {shown.length === 0 ? (
+      {showChurned ? <ChurnedView /> : <Directory />}
+    </div>
+  );
+}
+
+async function AddModalTrigger() {
+  const clients = await listActiveClients();
+  return (
+    <AddModal
+      title="New Password"
+      triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
+      trigger={
+        <>
+          <Plus className="w-4 h-4" /> New Password
+        </>
+      }
+    >
+      <CredentialForm action={createCredential} mode="create" clients={clients} />
+    </AddModal>
+  );
+}
+
+// ── Default landing view: pick a client, see just their passwords ──────────
+async function Directory() {
+  const clients = await listClientsWithCredentials();
+
+  if (clients.length === 0) {
+    return (
+      <div className="bg-white border border-dashed border-black/15 rounded-2xl p-14 text-center">
+        <div className="w-12 h-12 rounded-xl bg-brand-pale text-brand flex items-center justify-center mx-auto mb-4">
+          <KeyRound className="w-6 h-6" />
+        </div>
+        <p className="text-black/50">No stored passwords yet. Add your first with “New Password”.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-black/45 mb-4">Pick a client to see just their passwords.</p>
+      <ClientDirectory clients={clients} />
+    </div>
+  );
+}
+
+// ── "Churned clients" — a flat cross-client list, grouped by client. Low
+// traffic maintenance view, so unlike the default landing page it stays a
+// single flat list rather than its own per-client drill-down. ──────────────
+async function ChurnedView() {
+  const [creds, activeClients] = await Promise.all([
+    listChurnedClientCredentials(),
+    listActiveClients(),
+  ]);
+
+  // The edit form's client picker needs to include each churned client itself
+  // (labeled clearly) so re-opening a card here can still show/save its
+  // current client instead of silently falling back to no selection.
+  const churnedClientOpts = [...new Map(
+    creds.filter((c) => c.client).map((c) => [c.client!.id, { id: c.client!.id, companyName: `${c.client!.companyName} (Churned)` }]),
+  ).values()];
+  const clientOpts = [...activeClients, ...churnedClientOpts];
+
+  const byClient = new Map<string, { id: string; name: string; color: string | null; creds: typeof creds }>();
+  for (const c of creds) {
+    if (!c.client) continue;
+    const key = c.client.id;
+    if (!byClient.has(key)) {
+      byClient.set(key, { id: c.client.id, name: c.client.companyName, color: c.client.colorHex, creds: [] });
+    }
+    byClient.get(key)!.creds.push(c);
+  }
+  const groups = [...byClient.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <div className="space-y-8">
+      <h2 className="font-display text-2xl tracking-wide text-ink">Churned clients&apos; passwords</h2>
+
+      {groups.length === 0 ? (
         <div className="bg-white border border-dashed border-black/15 rounded-2xl p-14 text-center">
           <div className="w-12 h-12 rounded-xl bg-brand-pale text-brand flex items-center justify-center mx-auto mb-4">
             <KeyRound className="w-6 h-6" />
           </div>
-          <p className="text-black/50">
-            {view === "all"
-              ? "No stored passwords yet. Add your first with “New Password”."
-              : `No ${view} passwords yet.`}
-          </p>
+          <p className="text-black/50">No churned clients with stored passwords.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {shown.map((cred) => (
-            <CredentialCard key={cred.id} cred={cred} clients={clients} />
-          ))}
-        </div>
+        groups.map((g) => (
+          <section key={g.id} className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Link href={`/crm/${g.id}`} className="flex items-center gap-2 group/client">
+                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: g.color ?? "#cbd5e1" }} />
+                <h3 className="font-display text-2xl tracking-wide text-ink group-hover/client:text-brand transition-colors">
+                  {g.name}
+                </h3>
+              </Link>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-black/50 bg-black/5 border border-black/15 rounded px-1.5 py-0.5">
+                Churned
+              </span>
+              <span className="text-xs font-semibold text-black/35">
+                {g.creds.length} password{g.creds.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {g.creds.map((cred) => (
+                <CredentialCard key={cred.id} cred={cred} clients={clientOpts} />
+              ))}
+            </div>
+          </section>
+        ))
       )}
     </div>
   );

@@ -9,8 +9,6 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
-  Building2,
-  Lock,
 } from "lucide-react";
 import { revealPassword, updateCredential, deleteCredential } from "../actions";
 import CredentialForm from "./credential-form";
@@ -103,24 +101,13 @@ export default function CredentialCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-bold text-ink leading-snug truncate">{cred.label}</h3>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-            {cred.scope === "CLIENT" ? (
-              <span className="inline-flex items-center gap-1 text-ink/55">
-                <Building2 className="w-3 h-3" />
-                {cred.client?.companyName ?? "Client"}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-ink/55">
-                <Lock className="w-3 h-3" />
-                Internal
-              </span>
-            )}
-            {cred.category && (
+          {cred.category && (
+            <div className="mt-1">
               <span className="text-[10px] font-bold uppercase tracking-wide text-brand bg-brand-pale px-1.5 py-0.5 rounded">
                 {cred.category}
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button

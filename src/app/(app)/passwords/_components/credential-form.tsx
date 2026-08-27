@@ -77,8 +77,8 @@ export default function CredentialForm({
 
       {scope === "CLIENT" && (
         <div>
-          <label className={label}>Client</label>
-          <select name="clientId" defaultValue={defaults.clientId ?? ""} className={input}>
+          <label className={label}>Client *</label>
+          <select name="clientId" required defaultValue={defaults.clientId ?? ""} className={input}>
             <option value="">— select client —</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>{c.companyName}</option>
