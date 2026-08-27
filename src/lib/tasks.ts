@@ -6,7 +6,7 @@ const taskInclude = {
     select: {
       id: true,
       name: true,
-      client: { select: { companyName: true, colorHex: true } },
+      client: { select: { id: true, companyName: true, colorHex: true } },
     },
   },
   assignees: { include: { user: { select: { id: true, name: true } } } },

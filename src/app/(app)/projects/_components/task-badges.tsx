@@ -45,6 +45,37 @@ export function initials(name: string) {
   return name.split(" ").map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
 }
 
+export type ClientGroup<T> = { key: string; name: string; color: string | null; items: T[] };
+
+// Groups tasks (or any project-linked item) by client — "Internal" bucket for
+// no client, same convention used everywhere else in the app (Projects,
+// Vault, Passwords directories). Used to break up cross-client task views
+// (My Tasks board + table) so a long undifferentiated pile doesn't have to be
+// scanned all at once.
+export function groupByClient<
+  T extends { project: { client: { id: string; companyName: string; colorHex: string | null } | null } | null },
+>(items: T[]): ClientGroup<T>[] {
+  const map = new Map<string, ClientGroup<T>>();
+  for (const item of items) {
+    const client = item.project?.client;
+    const key = client?.id ?? "__internal__";
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        name: client?.companyName ?? "Internal",
+        color: client?.colorHex ?? null,
+        items: [],
+      });
+    }
+    map.get(key)!.items.push(item);
+  }
+  return [...map.values()].sort((a, b) => {
+    if (a.key === "__internal__") return 1;
+    if (b.key === "__internal__") return -1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 // Compact variant ("Aug 15") for space-tight task cards.
 export const fmtDate = (d: Date | string | null | undefined) =>
   fmtDateFull(d, { compact: true });

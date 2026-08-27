@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { X, CheckSquare } from "lucide-react";
-import { COLUMNS, PRIORITY, initials, fmtDate } from "../../projects/_components/task-badges";
+import { X, CheckSquare, ChevronRight } from "lucide-react";
+import { COLUMNS, PRIORITY, initials, fmtDate, groupByClient } from "../../projects/_components/task-badges";
 import { bulkUpdateTasks } from "../../projects/actions";
 
 type Row = {
@@ -14,7 +14,11 @@ type Row = {
   status: string;
   priority: string;
   dueDate: Date | string | null;
-  project: { id: string; name: string; client: { companyName: string } | null } | null;
+  project: {
+    id: string;
+    name: string;
+    client: { id: string; companyName: string; colorHex: string | null } | null;
+  } | null;
   assignees: { user: { id: string; name: string } }[];
 };
 
@@ -47,6 +51,32 @@ export default function TaskTable({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  // Group rows by client so a cross-client view doesn't read as one
+  // undifferentiated pile — same treatment as the board. A header only earns
+  // its keep once there's more than one client to tell apart.
+  const groups = useMemo(() => groupByClient(tasks), [tasks]);
+  const showGroupHeaders = groups.length > 1;
+
+  function toggleGroupCollapse(key: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+  function toggleGroupSelection(ids: string[], select: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (select) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
 
   // Bulk-edit field state ("" = leave unchanged).
   const [priority, setPriority] = useState("");
@@ -101,6 +131,82 @@ export default function TaskTable({
     setDueDate("");
     setClearDue(false);
     setArchived("");
+  }
+
+  function renderRow(t: Row) {
+    const href = t.project ? `/projects/${t.project.id}/tasks/${t.id}?from=tasks` : null;
+    const p = PRIORITY[t.priority] ?? PRIORITY.MEDIUM;
+    const isSel = selected.has(t.id);
+    return (
+      <tr
+        key={t.id}
+        className={`transition-colors ${isSel ? "bg-brand/[0.05]" : "hover:bg-black/[0.02]"}`}
+      >
+        <td className={`${td} w-10`}>
+          <input
+            type="checkbox"
+            className="accent-brand w-4 h-4 align-middle"
+            checked={isSel}
+            onChange={() => toggle(t.id)}
+            aria-label={`Select ${t.title}`}
+          />
+        </td>
+        <td className={`${td} max-w-[16rem]`}>
+          {href ? (
+            <Link href={href} className="font-semibold text-ink hover:text-brand line-clamp-2">
+              {t.title}
+            </Link>
+          ) : (
+            <span className="font-semibold text-ink line-clamp-2">{t.title}</span>
+          )}
+        </td>
+        <td className={`${td} whitespace-nowrap text-ink/70`}>
+          {t.project?.client?.companyName ?? "—"}
+        </td>
+        <td className={`${td} whitespace-nowrap text-ink/70`}>
+          {t.project?.name ?? "Inbox"}
+        </td>
+        <td className={`${td} max-w-[22rem] text-ink/55`}>
+          <span className="line-clamp-2">{t.description || "—"}</span>
+        </td>
+        <td className={`${td} whitespace-nowrap`}>
+          <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">
+            {STATUS_LABEL[t.status] ?? t.status}
+          </span>
+        </td>
+        <td className={`${td} whitespace-nowrap`}>
+          <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${p.cls}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${p.dot}`} />
+            {p.label}
+          </span>
+        </td>
+        <td className={td}>
+          {t.assignees.length === 0 ? (
+            <span className="text-ink/30 text-xs">—</span>
+          ) : (
+            <div className="flex -space-x-1.5">
+              {t.assignees.slice(0, 4).map((a) => (
+                <span
+                  key={a.user.id}
+                  title={a.user.name}
+                  className="w-6 h-6 rounded-full bg-midnight text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white"
+                >
+                  {initials(a.user.name)}
+                </span>
+              ))}
+              {t.assignees.length > 4 && (
+                <span className="w-6 h-6 rounded-full bg-black/10 text-ink/60 text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                  +{t.assignees.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+        </td>
+        <td className={`${td} whitespace-nowrap text-ink/60`}>
+          {t.dueDate ? fmtDate(t.dueDate) : "—"}
+        </td>
+      </tr>
+    );
   }
 
   const changes: Parameters<typeof bulkUpdateTasks>[1] = {};
@@ -266,83 +372,55 @@ export default function TaskTable({
                 <th className={th}>Due</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/[0.05]">
-              {tasks.map((t) => {
-                const href = t.project ? `/projects/${t.project.id}/tasks/${t.id}?from=tasks` : null;
-                const p = PRIORITY[t.priority] ?? PRIORITY.MEDIUM;
-                const isSel = selected.has(t.id);
-                return (
-                  <tr
-                    key={t.id}
-                    className={`transition-colors ${isSel ? "bg-brand/[0.05]" : "hover:bg-black/[0.02]"}`}
-                  >
-                    <td className={`${td} w-10`}>
-                      <input
-                        type="checkbox"
-                        className="accent-brand w-4 h-4 align-middle"
-                        checked={isSel}
-                        onChange={() => toggle(t.id)}
-                        aria-label={`Select ${t.title}`}
-                      />
-                    </td>
-                    <td className={`${td} max-w-[16rem]`}>
-                      {href ? (
-                        <Link href={href} className="font-semibold text-ink hover:text-brand line-clamp-2">
-                          {t.title}
-                        </Link>
-                      ) : (
-                        <span className="font-semibold text-ink line-clamp-2">{t.title}</span>
-                      )}
-                    </td>
-                    <td className={`${td} whitespace-nowrap text-ink/70`}>
-                      {t.project?.client?.companyName ?? "—"}
-                    </td>
-                    <td className={`${td} whitespace-nowrap text-ink/70`}>
-                      {t.project?.name ?? "Inbox"}
-                    </td>
-                    <td className={`${td} max-w-[22rem] text-ink/55`}>
-                      <span className="line-clamp-2">{t.description || "—"}</span>
-                    </td>
-                    <td className={`${td} whitespace-nowrap`}>
-                      <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">
-                        {STATUS_LABEL[t.status] ?? t.status}
-                      </span>
-                    </td>
-                    <td className={`${td} whitespace-nowrap`}>
-                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${p.cls}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${p.dot}`} />
-                        {p.label}
-                      </span>
-                    </td>
-                    <td className={td}>
-                      {t.assignees.length === 0 ? (
-                        <span className="text-ink/30 text-xs">—</span>
-                      ) : (
-                        <div className="flex -space-x-1.5">
-                          {t.assignees.slice(0, 4).map((a) => (
-                            <span
-                              key={a.user.id}
-                              title={a.user.name}
-                              className="w-6 h-6 rounded-full bg-midnight text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white"
-                            >
-                              {initials(a.user.name)}
-                            </span>
-                          ))}
-                          {t.assignees.length > 4 && (
-                            <span className="w-6 h-6 rounded-full bg-black/10 text-ink/60 text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
-                              +{t.assignees.length - 4}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className={`${td} whitespace-nowrap text-ink/60`}>
-                      {t.dueDate ? fmtDate(t.dueDate) : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+            {groups.map((g) => {
+              const groupIds = g.items.map((t) => t.id);
+              const selectedInGroup = groupIds.filter((id) => selected.has(id)).length;
+              const groupAllSelected = groupIds.length > 0 && selectedInGroup === groupIds.length;
+              const groupSomeSelected = selectedInGroup > 0 && !groupAllSelected;
+              const isCollapsed = showGroupHeaders && collapsedGroups.has(g.key);
+              return (
+                <tbody key={g.key} className="divide-y divide-black/[0.05]">
+                  {showGroupHeaders && (
+                    <tr className="bg-cream/70 border-y border-black/[0.06]">
+                      <td className={`${td} w-10 py-2`}>
+                        <input
+                          type="checkbox"
+                          className="accent-brand w-4 h-4 align-middle"
+                          checked={groupAllSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = groupSomeSelected;
+                          }}
+                          onChange={() => toggleGroupSelection(groupIds, !groupAllSelected)}
+                          aria-label={`Select all ${g.name} tasks`}
+                        />
+                      </td>
+                      <td colSpan={8} className={`${td} py-2`}>
+                        <button
+                          type="button"
+                          onClick={() => toggleGroupCollapse(g.key)}
+                          className="w-full flex items-center gap-2 text-left"
+                        >
+                          <ChevronRight
+                            className={`w-3.5 h-3.5 text-ink/40 shrink-0 transition-transform ${
+                              isCollapsed ? "" : "rotate-90"
+                            }`}
+                          />
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ background: g.color ?? "#94a3b8" }}
+                          />
+                          <span className="text-xs font-bold uppercase tracking-wide text-ink/60">
+                            {g.name}
+                          </span>
+                          <span className="text-xs font-semibold text-ink/35">{g.items.length}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                  {!isCollapsed && g.items.map(renderRow)}
+                </tbody>
+              );
+            })}
           </table>
         </div>
       </div>

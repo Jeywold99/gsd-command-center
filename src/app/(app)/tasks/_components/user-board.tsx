@@ -14,8 +14,8 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { CalendarClock, Repeat } from "lucide-react";
-import { COLUMNS, PRIORITY, initials, fmtDate } from "../../projects/_components/task-badges";
+import { CalendarClock, Repeat, ChevronRight } from "lucide-react";
+import { COLUMNS, PRIORITY, initials, fmtDate, groupByClient } from "../../projects/_components/task-badges";
 import { moveTaskStatus } from "../../projects/actions";
 
 type BoardTask = {
@@ -25,7 +25,11 @@ type BoardTask = {
   priority: string;
   dueDate: Date | string | null;
   recurrence?: string | null;
-  project: { id: string; name: string; client: { companyName: string; colorHex: string | null } | null } | null;
+  project: {
+    id: string;
+    name: string;
+    client: { id: string; companyName: string; colorHex: string | null } | null;
+  } | null;
   assignees: { user: { id: string; name: string } }[];
 };
 
@@ -116,8 +120,25 @@ function TaskCard({ task }: { task: BoardTask }) {
   );
 }
 
-function Column({ status, label, tasks }: { status: string; label: string; tasks: BoardTask[] }) {
+function Column({
+  status,
+  label,
+  tasks,
+  collapsed,
+  onToggleGroup,
+}: {
+  status: string;
+  label: string;
+  tasks: BoardTask[];
+  collapsed: Set<string>;
+  onToggleGroup: (key: string) => void;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  const clientGroups = groupByClient(tasks);
+  // A client sub-header per group only earns its keep once there's more than
+  // one client to tell apart in this column — otherwise it's just noise.
+  const showGroupHeaders = clientGroups.length > 1;
+
   return (
     <div
       ref={setNodeRef}
@@ -129,10 +150,43 @@ function Column({ status, label, tasks }: { status: string; label: string; tasks
         <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">{label}</span>
         <span className="text-[11px] font-bold text-ink/35">{tasks.length}</span>
       </div>
-      <div className="space-y-2 min-h-[40px]">
-        {tasks.map((t) => (
-          <TaskCard key={t.id} task={t} />
-        ))}
+      <div className="space-y-3 min-h-[40px]">
+        {clientGroups.map((g) => {
+          const groupKey = `${status}:${g.key}`;
+          const isCollapsed = showGroupHeaders && collapsed.has(groupKey);
+          return (
+            <div key={g.key}>
+              {showGroupHeaders && (
+                <button
+                  type="button"
+                  onClick={() => onToggleGroup(groupKey)}
+                  className="w-full flex items-center gap-1.5 px-1 py-1 text-left hover:bg-black/[0.03] rounded-lg transition"
+                >
+                  <ChevronRight
+                    className={`w-3 h-3 text-ink/35 shrink-0 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: g.color ?? "#94a3b8" }}
+                  />
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-ink/50 truncate">
+                    {g.name}
+                  </span>
+                  <span className="text-[10px] font-semibold text-ink/30 ml-auto shrink-0">
+                    {g.items.length}
+                  </span>
+                </button>
+              )}
+              {!isCollapsed && (
+                <div className="space-y-2 mt-1">
+                  {g.items.map((t) => (
+                    <TaskCard key={t.id} task={t} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -141,6 +195,7 @@ function Column({ status, label, tasks }: { status: string; label: string; tasks
 export default function UserBoard({ tasks }: { tasks: BoardTask[] }) {
   const [cols, setCols] = useState<Cols>(() => group(tasks));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const colsRef = useRef(cols);
   useEffect(() => {
     colsRef.current = cols;
@@ -175,6 +230,15 @@ export default function UserBoard({ tasks }: { tasks: BoardTask[] }) {
     void moveTaskStatus(String(active.id), to);
   }
 
+  function toggleGroup(key: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -184,7 +248,14 @@ export default function UserBoard({ tasks }: { tasks: BoardTask[] }) {
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {COLUMNS.map((c) => (
-          <Column key={c.status} status={c.status} label={c.label} tasks={cols[c.status] ?? []} />
+          <Column
+            key={c.status}
+            status={c.status}
+            label={c.label}
+            tasks={cols[c.status] ?? []}
+            collapsed={collapsed}
+            onToggleGroup={toggleGroup}
+          />
         ))}
       </div>
       <DragOverlay>
