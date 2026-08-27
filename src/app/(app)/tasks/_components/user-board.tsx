@@ -195,7 +195,21 @@ function Column({
 export default function UserBoard({ tasks }: { tasks: BoardTask[] }) {
   const [cols, setCols] = useState<Cols>(() => group(tasks));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Client sub-groups start closed — with several clients' work stacked into
+  // one column, opening straight into every card at once is the clutter this
+  // grouping exists to avoid. Seeded once from the initial task set; the page
+  // remounts this board (key={scope}-{archivedOnly}) whenever you switch to a
+  // genuinely different set of tasks, so it re-defaults to closed each time.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const c of COLUMNS) {
+      const colTasks = tasks.filter((t) => t.status === c.status);
+      for (const g of groupByClient(colTasks)) {
+        initial.add(`${c.status}:${g.key}`);
+      }
+    }
+    return initial;
+  });
   const colsRef = useRef(cols);
   useEffect(() => {
     colsRef.current = cols;

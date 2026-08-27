@@ -51,7 +51,14 @@ export default function TaskTable({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  // Client groups start closed — same reasoning as the board: opening
+  // straight into every client's rows at once is the clutter this grouping
+  // exists to avoid. Seeded once from the initial task set; the page
+  // remounts this table (key={scope}-{archivedOnly}) whenever you switch to
+  // a genuinely different set of tasks, so it re-defaults to closed each time.
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    () => new Set(groupByClient(tasks).map((g) => g.key)),
+  );
 
   // Group rows by client so a cross-client view doesn't read as one
   // undifferentiated pile — same treatment as the board. A header only earns
