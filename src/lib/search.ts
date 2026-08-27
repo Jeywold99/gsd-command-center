@@ -55,10 +55,16 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       },
     }),
     prisma.document.findMany({
-      where: { isArchived: false, messageId: null, taskId: null, name: insensitive },
+      where: {
+        isArchived: false,
+        messageId: null,
+        taskId: null,
+        name: insensitive,
+        OR: [{ clientId: null }, { client: { status: { not: "CHURNED" } } }],
+      },
       take: LIMIT_EACH,
       orderBy: { createdAt: "desc" },
-      select: { id: true, name: true, category: true, client: { select: { companyName: true } } },
+      select: { id: true, name: true, category: true, clientId: true, client: { select: { companyName: true } } },
     }),
   ]);
 
@@ -92,7 +98,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       id: d.id,
       title: d.name,
       subtitle: d.client?.companyName ?? d.category ?? "Vault",
-      href: `/vault`,
+      href: `/vault/client/${d.clientId ?? "internal"}`,
       colorHex: null,
     })),
   ];
