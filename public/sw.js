@@ -8,7 +8,7 @@
 // Bump CACHE on changes to this file's caching rules; old caches are cleared on
 // activate.
 
-const CACHE = "gsd-static-v1";
+const CACHE = "gsd-static-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 
