@@ -6,9 +6,9 @@ import type { ClientFormState } from "@/lib/definitions";
 import { TIMEZONES } from "@/lib/timezones";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-xl px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
 const label =
-  "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5";
+  "block text-xs font-semibold text-[#6B645D] mb-1.5";
 
 type Defaults = {
   id?: string;
@@ -66,7 +66,7 @@ export default function ClientForm({
                 />
                 <span
                   className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold transition ${
-                    kind === k ? "bg-brand text-white" : "text-ink/60"
+                    kind === k ? "bg-brand text-ink" : "text-ink/60"
                   }`}
                 >
                   {k === "CLIENT" ? "Client" : "Lead"}
@@ -221,7 +221,7 @@ export default function ClientForm({
                 />
                 <span
                   className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold transition ${
-                    billingType === t ? "bg-brand text-white" : "text-ink/60"
+                    billingType === t ? "bg-brand text-ink" : "text-ink/60"
                   }`}
                 >
                   {t === "HOURLY" ? "Hourly" : "Fixed"}
@@ -325,13 +325,13 @@ export default function ClientForm({
         <button
           type="submit"
           disabled={pending}
-          className="bg-brand hover:bg-brand-hover disabled:opacity-60 text-white font-bold uppercase tracking-wide px-6 py-2.5 rounded-full transition-colors shadow-sm"
+          className="min-h-11 bg-brand hover:bg-brand-hover disabled:opacity-60 text-ink font-bold px-6 py-2.5 rounded-[14px] transition-colors"
         >
           {pending ? "Saving…" : mode === "create" ? "Create →" : "Save Changes"}
         </button>
         <Link
           href={mode === "edit" && defaults.id ? `/crm/${defaults.id}` : "/crm"}
-          className="text-sm font-semibold text-ink/50 hover:text-ink"
+          className="min-h-11 px-2 text-sm font-semibold text-[#6B645D] hover:text-ink"
         >
           Cancel
         </Link>

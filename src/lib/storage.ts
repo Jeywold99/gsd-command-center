@@ -18,6 +18,13 @@ export async function saveFile(file: File): Promise<{ storagePath: string; sizeB
   return { storagePath: key, sizeBytes: buf.length };
 }
 
+// Store bytes under a caller-chosen key (e.g. a profile photo). The key is
+// reduced to its basename, same as reads.
+export async function saveBuffer(key: string, buf: Buffer): Promise<void> {
+  await fs.mkdir(/*turbopackIgnore: true*/ ROOT, { recursive: true });
+  await fs.writeFile(path.join(/*turbopackIgnore: true*/ ROOT, path.basename(key)), buf);
+}
+
 export async function readFile(storagePath: string): Promise<Buffer> {
   // basename guards against path traversal.
   const key = path.basename(storagePath);

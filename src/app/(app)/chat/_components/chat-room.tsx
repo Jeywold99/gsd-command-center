@@ -10,7 +10,7 @@ import {
 import Link from "next/link";
 import { io, type Socket } from "socket.io-client";
 import * as chrono from "chrono-node";
-import { CalendarPlus, Check } from "lucide-react";
+import { CalendarPlus, Check, SendHorizontal } from "lucide-react";
 import { initials } from "../../projects/_components/task-badges";
 import { addMessageToCalendar } from "../actions";
 
@@ -136,7 +136,7 @@ function MessageDateAction({ date, message }: { date: Date; message: string }) {
             <button
               type="submit"
               disabled={pending}
-              className="flex-1 rounded-full bg-brand px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white hover:bg-brand-hover disabled:opacity-60"
+              className="flex-1 rounded-[14px] bg-brand px-3 py-1.5 text-xs font-bold text-ink hover:bg-brand-hover disabled:opacity-60"
             >
               {pending ? "Adding…" : "Add event"}
             </button>
@@ -309,41 +309,56 @@ export default function ChatRoom({
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="px-5 py-3 border-b border-black/[0.07] flex items-center justify-between">
-        <span className="font-display text-xl tracking-wide text-ink">#{channelName}</span>
+        <span className="text-[17px] font-bold text-ink">#{channelName}</span>
         <span className={`text-[11px] font-bold uppercase tracking-wide inline-flex items-center gap-1.5 ${connected ? "text-success" : "text-black/30"}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-success animate-pulse" : "bg-black/25"}`} />
           {connected ? "Live" : "Connecting…"}
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 space-y-3">
+      <div className="flex-1 overflow-y-auto overscroll-contain bg-cream/50 px-3.5 py-4 space-y-3 lg:px-5">
         {messages.length === 0 ? (
-          <p className="text-sm text-black/40">No messages yet. Say hi 👋</p>
+          <p className="text-sm text-[#6B645D]">No messages yet. Say hi 👋</p>
         ) : (
-          messages.map((m) => (
-            <div key={m.id} className="flex gap-2.5">
-              <div className={`w-8 h-8 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${m.sender.id === meId ? "bg-brand text-white" : "bg-midnight text-white"}`}>
-                {initials(m.sender.name)}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-bold text-ink">{m.sender.name}</span>
-                  <span className="text-[11px] text-black/35">{time(m.createdAt)}</span>
-                </div>
-                <p className="text-sm text-ink/90 whitespace-pre-wrap break-words">
-                  {renderContent(m.content, mentionRegex)}
-                </p>
-                {detected.has(m.id) && (
-                  <MessageDateAction date={detected.get(m.id)!} message={m.content} />
+          messages.map((m, i) => {
+            const mine = m.sender.id === meId;
+            // Consecutive messages from the same person don't repeat the header.
+            const grouped = i > 0 && messages[i - 1].sender.id === m.sender.id;
+            return (
+              <div key={m.id} className={`flex gap-2.5 ${mine ? "flex-row-reverse" : ""} ${grouped ? "-mt-1.5" : ""}`}>
+                {!mine && (
+                  <div
+                    className={`w-8 h-8 rounded-full bg-midnight text-white text-[10px] font-bold flex items-center justify-center shrink-0 ${grouped ? "invisible" : ""}`}
+                  >
+                    {initials(m.sender.name)}
+                  </div>
                 )}
+                <div className={`flex min-w-0 max-w-[80%] flex-col ${mine ? "items-end" : "items-start"}`}>
+                  {!grouped && (
+                    <div className="mb-1 flex items-baseline gap-2 px-1">
+                      {!mine && <span className="text-[13px] font-bold text-ink">{m.sender.name}</span>}
+                      <span className="text-[11px] text-[#6B645D]">{time(m.createdAt)}</span>
+                    </div>
+                  )}
+                  <p
+                    className={`whitespace-pre-wrap break-words rounded-[18px] px-3.5 py-2.5 text-[15px] leading-snug lg:text-sm ${
+                      mine ? "rounded-tr-md bg-midnight text-white" : "rounded-tl-md border border-black/[0.06] bg-white text-ink"
+                    }`}
+                  >
+                    {renderContent(m.content, mentionRegex)}
+                  </p>
+                  {detected.has(m.id) && (
+                    <MessageDateAction date={detected.get(m.id)!} message={m.content} />
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={send} className="relative p-3 border-t border-black/[0.07] flex gap-2">
+      <form onSubmit={send} className="relative p-2.5 border-t border-black/[0.07] flex gap-2 bg-white">
         {/* @mention autocomplete */}
         {mention && filtered.length > 0 && (
           <div className="absolute bottom-full left-3 mb-1 w-64 overflow-hidden rounded-xl border border-black/10 bg-white shadow-lg">
@@ -377,13 +392,16 @@ export default function ChatRoom({
           onChange={onChange}
           onKeyDown={onKeyDown}
           placeholder={`Message #${channelName}  —  @ to mention`}
-          className="flex-1 bg-cream border border-black/10 rounded-full px-4 py-2.5 text-sm text-ink placeholder:text-black/35 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+          aria-label={`Message #${channelName}`}
+          className="min-w-0 flex-1 h-11 bg-cream border border-black/10 rounded-[14px] px-4 text-sm text-ink placeholder:text-[#8A827A] focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
         />
         <button
           type="submit"
-          className="bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-5 rounded-full transition-colors"
+          aria-label="Send"
+          className="flex h-11 items-center gap-1.5 bg-brand hover:bg-brand-hover text-ink font-bold text-sm px-4 rounded-[14px] transition-colors"
         >
-          Send
+          <SendHorizontal className="w-[18px] h-[18px]" />
+          <span className="hidden sm:inline">Send</span>
         </button>
       </form>
     </div>

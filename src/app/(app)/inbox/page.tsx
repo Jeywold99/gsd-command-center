@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Inbox as InboxIcon, Flag, Building2 } from "lucide-react";
+import { Inbox as InboxIcon, Flag, Building2, ChevronLeft } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
 import { listThreads, getThread, type InboxFilter } from "@/lib/email";
 import { fmtDate } from "@/lib/format";
@@ -47,41 +47,40 @@ export default async function InboxPage({
   );
   const threadNeedsReply = latestInbound?.needsReply ?? false;
 
-  // Below `lg` there's only room for one pane — show the list until a thread
-  // is picked (tracked in the URL already), then swap to just the
-  // conversation with a way back, instead of squeezing both into ~375px.
+  // Phones: the list is the screen until a thread is picked (?thread=…), then
+  // the conversation takes over with a way back — both scroll with the page.
+  // Desktop: a fixed-height split panel.
   return (
-    <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-2xl border border-black/[0.07] bg-white">
+    <div className="lg:flex lg:h-[calc(100dvh-15rem)] lg:min-h-[520px] lg:overflow-hidden lg:rounded-[22px] lg:border lg:border-black/[0.07] lg:bg-white">
       {/* ── Thread list ── */}
       <aside
-        className={`${selected ? "hidden lg:flex" : "flex"} w-full lg:w-80 shrink-0 border-r border-black/[0.07] flex-col`}
+        className={`${selected ? "hidden lg:flex" : "flex"} w-full flex-col gap-3 lg:w-[340px] lg:shrink-0 lg:gap-0 lg:border-r lg:border-black/[0.07]`}
       >
-        <div className="p-3 border-b border-black/[0.06]">
-          <div className="flex gap-1">
+        <div className="lg:border-b lg:border-black/[0.06] lg:p-3">
+          <nav aria-label="Filter" className="grid grid-cols-3 gap-1 rounded-2xl border border-black/[0.07] bg-white p-1 lg:border-0 lg:p-0">
             {FILTERS.map((f) => (
               <Link
                 key={f.key}
                 href={`/inbox?filter=${f.key}`}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide transition ${
-                  filter === f.key
-                    ? "bg-brand text-white"
-                    : "text-ink/55 hover:bg-black/[0.04]"
+                aria-current={filter === f.key ? "page" : undefined}
+                className={`flex h-[38px] items-center justify-center rounded-xl text-sm font-semibold transition ${
+                  filter === f.key ? "bg-midnight text-white" : "text-[#4F4943] hover:bg-cream"
                 }`}
               >
                 {f.label}
               </Link>
             ))}
-          </div>
+          </nav>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="lg:flex-1 lg:overflow-y-auto">
           {threads.length === 0 ? (
-            <div className="p-8 text-center text-sm text-black/45">
-              <InboxIcon className="w-8 h-8 mx-auto text-black/15" />
+            <div className="rounded-[22px] border border-dashed border-black/15 bg-white p-8 text-center text-sm text-[#6B645D] lg:rounded-none lg:border-0">
+              <InboxIcon className="mx-auto h-8 w-8 text-black/15" />
               <p className="mt-2">No conversations here.</p>
             </div>
           ) : (
-            <ul className="divide-y divide-black/[0.05]">
+            <ul className="flex flex-col gap-2.5 lg:gap-0 lg:divide-y lg:divide-black/[0.05]">
               {threads.map((t) => {
                 const last = t.messages[0];
                 const unread = t._count.messages > 0;
@@ -90,38 +89,32 @@ export default async function InboxPage({
                   <li key={t.id}>
                     <Link
                       href={`/inbox?thread=${t.id}&filter=${filter}`}
-                      className={`block px-4 py-3 transition-colors ${
-                        active ? "bg-brand/[0.06]" : "hover:bg-black/[0.03]"
+                      className={`flex flex-col gap-1 rounded-[22px] border border-black/[0.07] bg-white p-4 transition-colors lg:rounded-none lg:border-0 lg:px-4 lg:py-3 ${
+                        active ? "lg:bg-[#FFF1E6]" : "lg:hover:bg-cream"
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-2">
                         <span
-                          className="w-2 h-2 rounded-full shrink-0"
+                          className="h-2 w-2 shrink-0 rounded-full"
                           style={{ background: t.client?.colorHex ?? "#cbd5e1" }}
                           aria-hidden
                         />
                         <span
-                          className={`min-w-0 flex-1 truncate text-sm ${
-                            unread ? "font-bold text-ink" : "font-medium text-ink/80"
+                          className={`min-w-0 flex-1 truncate text-[15px] lg:text-sm ${
+                            unread ? "font-bold text-ink" : "font-medium text-[#4F4943]"
                           }`}
                         >
                           {t.subject}
                         </span>
-                        {last?.needsReply && (
-                          <Flag className="w-3.5 h-3.5 text-brand shrink-0" />
-                        )}
-                        <span className="text-[10px] text-black/35 shrink-0">
+                        {last?.needsReply && <Flag className="h-3.5 w-3.5 shrink-0 text-[#B34100]" aria-label="Needs reply" />}
+                        <span className="shrink-0 text-xs text-[#6B645D]">
                           {fmtDate(t.lastMessageAt, { compact: true })}
                         </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-black/45 truncate">
+                      </span>
+                      <span className="truncate text-[13px] font-medium text-[#6B645D] lg:text-xs">
                         {t.client?.companyName ?? last?.fromName ?? last?.fromEmail ?? "Unknown"}
-                      </p>
-                      {last && (
-                        <p className="mt-0.5 text-xs text-black/40 truncate">
-                          {preview(last.bodyText)}
-                        </p>
-                      )}
+                      </span>
+                      {last && <span className="truncate text-[13px] text-[#8A827A] lg:text-xs">{preview(last.bodyText)}</span>}
                     </Link>
                   </li>
                 );
@@ -132,94 +125,80 @@ export default async function InboxPage({
       </aside>
 
       {/* ── Conversation ── */}
-      <section className={`${selected ? "flex" : "hidden lg:flex"} flex-1 flex-col min-w-0`}>
+      <section className={`${selected ? "flex" : "hidden lg:flex"} min-w-0 flex-1 flex-col gap-3 lg:gap-0`}>
         {selected && (
           <Link
             href={`/inbox?filter=${filter}`}
-            className="lg:hidden flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-ink/50 hover:text-ink border-b border-black/[0.07]"
+            className="-ml-1 inline-flex min-h-11 items-center gap-0.5 self-start text-[15px] font-semibold text-[#B34100] lg:hidden"
           >
-            ← Back to inbox
+            <ChevronLeft className="h-5 w-5" strokeWidth={2.2} />
+            Inbox
           </Link>
         )}
         {!selected ? (
-          <div className="flex-1 grid place-items-center text-center text-black/40">
+          <div className="grid flex-1 place-items-center text-center text-[#6B645D]">
             <div>
-              <InboxIcon className="w-10 h-10 mx-auto text-black/15" />
+              <InboxIcon className="mx-auto h-10 w-10 text-black/15" />
               <p className="mt-2 text-sm">Select a conversation to read and reply.</p>
             </div>
           </div>
         ) : (
           <>
-            <header className="px-5 py-3 border-b border-black/[0.07] flex items-start justify-between gap-3">
+            <header className="flex items-start justify-between gap-3 rounded-[22px] border border-black/[0.07] bg-white p-4 lg:rounded-none lg:border-0 lg:border-b lg:px-5 lg:py-3.5">
               <div className="min-w-0">
-                <h2 className="font-display text-xl tracking-wide text-ink truncate">
-                  {selected.subject}
-                </h2>
-                <div className="mt-0.5 text-xs">
+                <h2 className="text-lg font-bold leading-snug text-ink lg:truncate lg:text-[17px]">{selected.subject}</h2>
+                <div className="mt-1 text-[13px]">
                   {selected.client ? (
                     <Link
                       href={`/crm/${selected.client.id}`}
-                      className="inline-flex items-center gap-1 text-brand hover:underline"
+                      className="inline-flex items-center gap-1 font-semibold text-[#B34100] hover:underline"
                     >
-                      <Building2 className="w-3.5 h-3.5" />
+                      <Building2 className="h-3.5 w-3.5" />
                       {selected.client.companyName}
                     </Link>
                   ) : (
-                    <span className="text-black/45">
-                      Unmatched sender · potential lead
-                    </span>
+                    <span className="text-[#6B645D]">Unmatched sender · potential lead</span>
                   )}
                 </div>
               </div>
               <form action={toggleThreadNeedsReply.bind(null, selected.id)}>
                 <button
                   type="submit"
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide border transition shrink-0 ${
+                  className={`inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-[13px] font-semibold transition ${
                     threadNeedsReply
-                      ? "bg-brand/10 text-brand border-brand/30"
-                      : "text-ink/55 border-black/10 hover:bg-black/[0.04]"
+                      ? "border-brand/30 bg-brand-pale text-[#8A3200]"
+                      : "border-black/10 text-[#4F4943] hover:bg-cream"
                   }`}
                 >
-                  <Flag className="w-3.5 h-3.5" />
-                  {threadNeedsReply ? "Needs reply" : "Flag reply"}
+                  <Flag className="h-3.5 w-3.5" />
+                  {threadNeedsReply ? "Needs reply" : "Flag"}
                 </button>
               </form>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="flex flex-col gap-4 py-1 lg:flex-1 lg:overflow-y-auto lg:p-5">
               {transcript.map((m) => {
                 const outbound = m.direction === "OUTBOUND";
                 return (
-                  <div
-                    key={m.id}
-                    className={`max-w-[80%] ${outbound ? "ml-auto" : ""}`}
-                  >
+                  <div key={m.id} className={`max-w-[88%] lg:max-w-[80%] ${outbound ? "ml-auto" : ""}`}>
                     <div
-                      className={`rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
+                      className={`whitespace-pre-wrap rounded-[20px] px-4 py-3 text-[15px] leading-relaxed lg:text-sm ${
                         outbound
-                          ? "bg-brand/10 text-ink rounded-tr-sm"
-                          : "bg-black/[0.04] text-ink rounded-tl-sm"
+                          ? "rounded-tr-md bg-midnight text-white"
+                          : "rounded-tl-md border border-black/[0.07] bg-white text-ink lg:border-0 lg:bg-cream"
                       }`}
                     >
                       {m.bodyText}
                     </div>
-                    <div
-                      className={`mt-1 text-[10px] text-black/40 flex gap-2 ${
-                        outbound ? "justify-end" : ""
-                      }`}
-                    >
-                      <span>
-                        {outbound
-                          ? (m.author?.name ?? "Team")
-                          : (m.fromName ?? m.fromEmail)}
-                      </span>
+                    <div className={`mt-1 flex gap-2 text-[11px] text-[#6B645D] ${outbound ? "justify-end" : ""}`}>
+                      <span>{outbound ? (m.author?.name ?? "Team") : (m.fromName ?? m.fromEmail)}</span>
                       <span>·</span>
                       <span>{fmtDate(m.createdAt)}</span>
                       {outbound && m.status !== "SENT" && (
                         <>
                           <span>·</span>
-                          <span className="uppercase font-bold text-brand">
-                            {m.status === "QUEUED" ? "Queued" : m.status}
+                          <span className="font-bold text-[#B34100]">
+                            {m.status === "QUEUED" ? "Queued" : m.status.charAt(0) + m.status.slice(1).toLowerCase()}
                           </span>
                         </>
                       )}

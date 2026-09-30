@@ -33,9 +33,9 @@ const PAY_FREQUENCY_LABEL: Record<string, string> = {
 };
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
 const smallBtn =
-  "bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide px-3.5 py-2 rounded-full transition-colors";
+  "min-h-11 bg-brand hover:bg-brand-hover text-ink text-sm font-bold px-3.5 py-2 rounded-[14px] transition-colors";
 
 export default async function ClientDetailPage({
   params,
@@ -54,14 +54,14 @@ export default async function ClientDetailPage({
     <div className="space-y-6">
       <Link
         href={isLead ? "/crm?tab=leads" : "/crm"}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
+        className="-ml-1 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-[#B34100] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to CRM
       </Link>
 
       {/* ── Header ── */}
-      <div className="bg-white rounded-2xl border border-black/[0.07] p-6">
+      <div className="bg-white rounded-[22px] border border-black/[0.07] p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export default async function ClientDetailPage({
                 className="w-3.5 h-3.5 rounded-full shrink-0"
                 style={{ background: client.colorHex ?? "#cbd5e1" }}
               />
-              <h2 className="font-display text-4xl tracking-wide text-ink leading-none">
+              <h2 className="font-display text-[44px] leading-[0.95] tracking-[0.01em] text-ink lg:text-[56px]">
                 {client.companyName}
               </h2>
             </div>
@@ -124,7 +124,7 @@ export default async function ClientDetailPage({
                     ))}
                   </select>
                 </div>
-                <button type="submit" className="border border-black/10 text-ink/70 hover:bg-cream text-xs font-bold uppercase tracking-wide px-3.5 py-2 rounded-full transition">
+                <button type="submit" className="min-h-11 border border-black/10 text-ink hover:bg-cream text-sm font-semibold px-4 rounded-[14px] transition">
                   Save
                 </button>
               </form>
@@ -146,7 +146,7 @@ export default async function ClientDetailPage({
                   ))}
                 </select>
               </div>
-              <button type="submit" className="border border-black/10 text-ink/70 hover:bg-cream text-xs font-bold uppercase tracking-wide px-3.5 py-2 rounded-full transition">
+              <button type="submit" className="min-h-11 border border-black/10 text-ink hover:bg-cream text-sm font-semibold px-4 rounded-[14px] transition">
                 Save
               </button>
             </form>
@@ -158,8 +158,8 @@ export default async function ClientDetailPage({
         {/* ── Left: Activity + Projects ── */}
         <div className="lg:col-span-2 space-y-6">
           {/* Activity */}
-          <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
-            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Activity</h3>
+          <section className="bg-white rounded-[22px] border border-black/[0.07] p-6">
+            <h3 className="text-[17px] font-bold text-ink mb-4">Activity</h3>
             <form action={addNote} className="mb-5">
               <input type="hidden" name="clientId" value={client.id} />
               <textarea
@@ -196,8 +196,8 @@ export default async function ClientDetailPage({
           </section>
 
           {/* Projects */}
-          <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
-            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Projects</h3>
+          <section className="bg-white rounded-[22px] border border-black/[0.07] p-6">
+            <h3 className="text-[17px] font-bold text-ink mb-4">Projects</h3>
             {client.projects.length === 0 ? (
               <p className="text-sm text-black/40">
                 No projects yet. Projects arrive in Phase 2.
@@ -218,8 +218,8 @@ export default async function ClientDetailPage({
         {/* ── Right: Details, Contacts, Billing ── */}
         <div className="space-y-6">
           {/* Details */}
-          <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
-            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Details</h3>
+          <section className="bg-white rounded-[22px] border border-black/[0.07] p-6">
+            <h3 className="text-[17px] font-bold text-ink mb-4">Details</h3>
             <dl className="space-y-2.5 text-sm">
               <Row k="Service" v={client.serviceType ?? "—"} />
               <div className="flex justify-between gap-4">
@@ -241,8 +241,8 @@ export default async function ClientDetailPage({
           </section>
 
           {/* Contacts */}
-          <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
-            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Contacts</h3>
+          <section className="bg-white rounded-[22px] border border-black/[0.07] p-6">
+            <h3 className="text-[17px] font-bold text-ink mb-4">Contacts</h3>
             {client.contacts.length === 0 ? (
               <p className="text-sm text-black/40 mb-3">No contacts yet.</p>
             ) : (
@@ -267,7 +267,7 @@ export default async function ClientDetailPage({
 
             <AddModal
               title="Add Contact"
-              triggerClassName="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand"
+              triggerClassName="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[#B34100]"
               trigger={
                 <>
                   <Plus className="w-3.5 h-3.5" /> Add contact
@@ -289,8 +289,8 @@ export default async function ClientDetailPage({
           </section>
 
           {/* Billing */}
-          <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
-            <h3 className="font-display text-2xl tracking-wide text-ink mb-4">Billing</h3>
+          <section className="bg-white rounded-[22px] border border-black/[0.07] p-6">
+            <h3 className="text-[17px] font-bold text-ink mb-4">Billing</h3>
             {currentRate ? (
               <>
                 <p className="text-3xl font-display text-ink tracking-wide">

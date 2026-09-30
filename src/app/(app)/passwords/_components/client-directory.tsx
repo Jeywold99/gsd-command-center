@@ -52,7 +52,7 @@ export default function ClientDirectory({ clients }: { clients: ClientCredential
                   <Building2 className="w-4 h-4 shrink-0 text-black/35" />
                 )}
                 <h3
-                  className={`font-display text-xl tracking-wide leading-tight truncate transition-colors ${
+                  className={`text-[17px] font-bold leading-tight truncate transition-colors ${
                     c.id ? "text-ink group-hover:text-brand" : "text-black/50"
                   }`}
                 >

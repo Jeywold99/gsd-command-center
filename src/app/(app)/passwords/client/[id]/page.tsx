@@ -31,14 +31,14 @@ export default async function ClientPasswordsPage({
     <div className="space-y-6">
       <Link
         href="/passwords"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
+        className="-ml-1 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-[#B34100] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
         All clients
       </Link>
 
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-black/[0.07] p-6">
+      <div className="bg-white rounded-[22px] border border-black/[0.07] p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -47,7 +47,7 @@ export default async function ClientPasswordsPage({
               ) : (
                 <Building2 className="w-6 h-6 text-black/35" />
               )}
-              <h2 className="font-display text-4xl tracking-wide text-ink leading-none">
+              <h2 className="font-display text-[44px] leading-[0.95] tracking-[0.01em] text-ink lg:text-[56px]">
                 {client ? client.companyName : "Internal"}
               </h2>
             </div>
@@ -71,7 +71,7 @@ export default async function ClientPasswordsPage({
       <div className="flex items-center justify-end">
         <AddModal
           title="New Password"
-          triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
+          triggerClassName="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-ink font-bold text-sm px-4 py-2.5 rounded-[14px] transition-colors"
           trigger={
             <>
               <Plus className="w-4 h-4" />

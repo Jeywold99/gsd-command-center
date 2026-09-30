@@ -165,7 +165,7 @@ function UrlEntryForm({
       </div>
       <button
         type="submit"
-        className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-brand-hover"
+        className="shrink-0 rounded-[10px] bg-brand px-3 py-1.5 text-xs font-bold text-ink transition-colors hover:bg-brand-hover"
       >
         {submitLabel}
       </button>

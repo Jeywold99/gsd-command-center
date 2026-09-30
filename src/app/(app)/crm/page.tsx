@@ -29,7 +29,49 @@ function ClientsTable({
   healthMap?: Map<string, ComputedHealth>;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
+    <>
+      {/* Phones: one card per client */}
+      <ul className="flex flex-col gap-2.5 lg:hidden">
+        {clients.map((c) => {
+          const health = healthMap?.get(c.id);
+          return (
+            <li key={c.id}>
+              <Link
+                href={`/crm/${c.id}`}
+                className="flex flex-col gap-2.5 rounded-[22px] border border-black/[0.07] bg-white p-4"
+              >
+                <span className="flex items-center gap-2.5">
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] font-display text-lg text-white"
+                    style={{ background: c.colorHex ?? "#1E1E2E" }}
+                  >
+                    {c.companyName.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-bold">{c.companyName}</span>
+                    <span className="block truncate text-[13px] text-[#6B645D]">
+                      {[c.serviceType, c.contacts[0]?.name].filter(Boolean).join(" · ") || "—"}
+                    </span>
+                  </span>
+                  <StatusBadge status={c.status} />
+                </span>
+                <span className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-[#4F4943]">
+                  {health && (
+                    <HealthDot health={health.health} reasons={health.reasons} isOverride={health.isOverride} />
+                  )}
+                  <span>{rateOf(c.billingRates)}</span>
+                  <span>
+                    {c._count.projects} project{c._count.projects === 1 ? "" : "s"}
+                  </span>
+                  {c.timezone && <ClientClock timezone={c.timezone} />}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+    <div className="hidden lg:block bg-white rounded-[22px] border border-black/[0.07] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -87,6 +129,7 @@ function ClientsTable({
         </table>
       </div>
     </div>
+    </>
   );
 }
 
@@ -106,15 +149,15 @@ export default async function CrmPage({
   ]);
 
   const tabCls = (active: boolean) =>
-    `px-4 py-2 rounded-full text-sm font-bold transition ${
-      active ? "bg-midnight text-white" : "text-ink/60 hover:text-ink"
+    `flex h-[38px] items-center justify-center px-3 rounded-xl text-sm font-semibold whitespace-nowrap transition ${
+      active ? "bg-midnight text-white" : "text-[#4F4943] hover:bg-cream"
     }`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="inline-flex rounded-full bg-cream border border-black/10 p-1">
+      <div className="flex items-center justify-between gap-3">
+        <div className="grid flex-1 grid-cols-3 gap-1 rounded-2xl bg-white border border-black/[0.07] p-1 lg:inline-flex lg:flex-none">
           <Link href="/crm" className={tabCls(view === "clients")}>
             Clients ({clients.length})
           </Link>
@@ -127,9 +170,10 @@ export default async function CrmPage({
         </div>
         <Link
           href="/crm/new"
-          className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
+          aria-label="New client or lead"
+          className="inline-flex h-11 shrink-0 items-center gap-2 bg-brand hover:bg-brand-hover text-ink font-bold text-sm px-4 rounded-[14px] transition-colors"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" strokeWidth={2.6} />
           New
         </Link>
       </div>
@@ -139,35 +183,34 @@ export default async function CrmPage({
         leads.length === 0 ? (
           <EmptyState label="No leads yet. Add one to start tracking your pipeline." />
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+          // Phones: swipe sideways through the stages; desktop: all six columns.
+          <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-4 lg:overflow-visible lg:px-0 xl:grid-cols-6 [scrollbar-width:none]">
             {PIPELINE_STAGES.map((stage) => {
               const col = leads.filter((l) => l.pipelineStage === stage);
               return (
-                <div key={stage} className="bg-cream rounded-2xl border border-black/[0.06] p-3">
-                  <div className="flex items-center justify-between px-1 mb-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">
+                <div
+                  key={stage}
+                  className="w-[78%] shrink-0 snap-start rounded-[22px] bg-[#EFE9E2] p-3 lg:w-auto"
+                >
+                  <div className="mb-3 flex items-center justify-between px-1.5">
+                    <span className="text-sm font-bold text-ink">
                       <StageLabel stage={stage} />
                     </span>
-                    <span className="text-[11px] font-bold text-ink/35">{col.length}</span>
+                    <span className="text-[13px] font-semibold text-[#6B645D]">{col.length}</span>
                   </div>
                   <div className="space-y-2">
                     {col.map((lead) => (
                       <Link
                         key={lead.id}
                         href={`/crm/${lead.id}`}
-                        className="block bg-white rounded-xl border border-black/10 p-3 hover:border-brand/50 hover:shadow-sm transition"
+                        className="block rounded-2xl bg-white p-3.5 shadow-[0_1px_2px_rgba(26,26,26,0.06)] transition hover:ring-1 hover:ring-brand/40"
                       >
-                        <p className="font-bold text-ink text-sm leading-tight">
-                          {lead.companyName}
-                        </p>
-                        {lead.serviceType && (
-                          <p className="text-xs text-black/45 mt-0.5">{lead.serviceType}</p>
-                        )}
-                        {lead.contacts[0] && (
-                          <p className="text-xs text-black/40 mt-2">{lead.contacts[0].name}</p>
-                        )}
+                        <p className="text-[15px] font-bold leading-tight text-ink">{lead.companyName}</p>
+                        {lead.serviceType && <p className="mt-0.5 text-xs text-[#6B645D]">{lead.serviceType}</p>}
+                        {lead.contacts[0] && <p className="mt-2 text-xs text-[#6B645D]">{lead.contacts[0].name}</p>}
                       </Link>
                     ))}
+                    {col.length === 0 && <p className="px-1.5 py-2 text-xs text-[#8A827A]">No leads</p>}
                   </div>
                 </div>
               );
@@ -198,11 +241,11 @@ export default async function CrmPage({
 
 function EmptyState({ label }: { label: string }) {
   return (
-    <div className="bg-white border border-dashed border-black/15 rounded-2xl p-14 text-center">
-      <div className="w-12 h-12 rounded-xl bg-brand-pale text-brand flex items-center justify-center mx-auto mb-4">
+    <div className="bg-white border border-dashed border-black/15 rounded-[22px] p-10 lg:p-14 text-center">
+      <div className="w-12 h-12 rounded-2xl bg-brand-pale text-[#B34100] flex items-center justify-center mx-auto mb-4">
         <Building2 className="w-6 h-6" />
       </div>
-      <p className="text-black/50">{label}</p>
+      <p className="text-[#6B645D]">{label}</p>
     </div>
   );
 }

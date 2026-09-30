@@ -6,7 +6,7 @@ import { updateMilestone, deleteMilestone } from "../actions";
 import { announceSaved } from "../../_components/saved-toast";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
 const label = "block text-[11px] font-bold uppercase tracking-wide text-ink/50 mb-1";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -103,14 +103,14 @@ export default function MilestoneRow({
             <button
               type="submit"
               disabled={saving}
-              className="bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide px-4 py-2 rounded-full transition-colors"
+              className="min-h-11 bg-brand hover:bg-brand-hover text-ink text-sm font-bold px-4 py-2 rounded-[14px] transition-colors"
             >
               {saving ? "Saving…" : "Save changes"}
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="text-xs font-semibold text-ink/50 hover:text-ink"
+              className="min-h-11 px-2 text-sm font-semibold text-[#6B645D] hover:text-ink"
             >
               Cancel
             </button>

@@ -85,13 +85,13 @@ export default async function TimesheetPage({
               <select
                 name="user"
                 defaultValue={targetUserId}
-                className="bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand"
+                className="bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-brand"
               >
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
-              <button type="submit" className="text-xs font-bold uppercase tracking-wide text-brand">Go</button>
+              <button type="submit" className="min-h-11 px-3 text-sm font-semibold text-[#B34100]">Go</button>
             </form>
           )}
         </div>
@@ -100,7 +100,7 @@ export default async function TimesheetPage({
           <a href={`${exportBase}&type=payroll`} className="inline-flex items-center gap-1.5 border border-black/10 text-ink/70 hover:bg-cream text-sm font-semibold px-3 py-2 rounded-full transition">
             <Download className="w-4 h-4" /> Payroll CSV
           </a>
-          <a href={`${exportBase}&type=invoice`} className="inline-flex items-center gap-1.5 bg-brand hover:bg-brand-hover text-white text-sm font-bold px-3 py-2 rounded-full transition">
+          <a href={`${exportBase}&type=invoice`} className="min-h-11 inline-flex items-center gap-1.5 bg-brand hover:bg-brand-hover text-ink text-sm font-bold px-3 py-2 rounded-[14px] transition">
             <Download className="w-4 h-4" /> Invoice CSV
           </a>
         </div>
@@ -127,11 +127,11 @@ export default async function TimesheetPage({
 
       {/* Totals */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl border border-black/[0.07] p-5">
+        <div className="bg-white rounded-[22px] border border-black/[0.07] p-5">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">Total This Week</span>
           <p className="mt-1 font-display text-4xl tracking-wide text-ink">{fmtDuration(totalWeek)}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-black/[0.07] p-5">
+        <div className="bg-white rounded-[22px] border border-black/[0.07] p-5">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">Billable</span>
           <p className="mt-1 font-display text-4xl tracking-wide text-brand">{fmtDuration(totalBillable)}</p>
         </div>
@@ -139,13 +139,13 @@ export default async function TimesheetPage({
 
       {/* Per-project breakdown */}
       <div>
-        <h3 className="font-display text-2xl tracking-wide text-ink mb-3">Breakdown</h3>
+        <h3 className="text-[17px] font-bold text-ink mb-3">Breakdown</h3>
         {byProject.size === 0 ? (
           <div className="bg-white border border-dashed border-black/15 rounded-2xl p-10 text-center">
             <p className="text-black/50">No time logged this week.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
+          <div className="bg-white rounded-[22px] border border-black/[0.07] overflow-hidden">
             <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

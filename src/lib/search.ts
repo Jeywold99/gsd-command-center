@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "./prisma";
+import { taskPath } from "@/lib/task-path";
 
 export type SearchResult = {
   type: "client" | "project" | "task" | "document";
@@ -90,7 +91,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       id: t.id,
       title: t.title,
       subtitle: t.project ? `${t.project.client?.companyName ? `${t.project.client.companyName} · ` : ""}${t.project.name}` : "Inbox",
-      href: t.projectId ? `/projects/${t.projectId}/tasks/${t.id}` : "/tasks",
+      href: taskPath(t.id, t.projectId),
       colorHex: t.project?.client?.colorHex ?? null,
     })),
     ...documents.map((d) => ({

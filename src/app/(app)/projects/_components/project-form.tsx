@@ -5,8 +5,8 @@ import Link from "next/link";
 import type { ClientFormState } from "@/lib/definitions";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-xl px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
-const label = "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+const label = "block text-xs font-semibold text-[#6B645D] mb-1.5";
 
 type Defaults = {
   id?: string;
@@ -98,13 +98,13 @@ export default function ProjectForm({
         <button
           type="submit"
           disabled={pending}
-          className="bg-brand hover:bg-brand-hover disabled:opacity-60 text-white font-bold uppercase tracking-wide px-6 py-2.5 rounded-full transition-colors shadow-sm"
+          className="min-h-11 bg-brand hover:bg-brand-hover disabled:opacity-60 text-ink font-bold px-6 py-2.5 rounded-[14px] transition-colors"
         >
           {pending ? "Saving…" : mode === "create" ? "Create Project →" : "Save Changes"}
         </button>
         <Link
           href={cancelHref ?? (mode === "edit" && defaults.id ? `/projects/${defaults.id}` : "/projects")}
-          className="text-sm font-semibold text-ink/50 hover:text-ink"
+          className="min-h-11 px-2 text-sm font-semibold text-[#6B645D] hover:text-ink"
         >
           Cancel
         </Link>

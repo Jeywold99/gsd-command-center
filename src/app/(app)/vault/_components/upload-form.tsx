@@ -3,8 +3,8 @@
 import { Upload } from "lucide-react";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
-const label = "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+const label = "block text-xs font-semibold text-[#6B645D] mb-1.5";
 
 type ClientOpt = { id: string; companyName: string };
 
@@ -56,7 +56,7 @@ export default function UploadForm({
       <div className="flex items-center gap-2 pt-1">
         <button
           type="submit"
-          className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide px-5 py-2 rounded-full transition-colors"
+          className="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-ink text-sm font-bold px-5 py-2 rounded-[14px] transition-colors"
         >
           <Upload className="w-4 h-4" />
           Upload
@@ -65,7 +65,7 @@ export default function UploadForm({
           <button
             type="button"
             onClick={onDone}
-            className="text-xs font-semibold text-ink/50 hover:text-ink"
+            className="min-h-11 px-2 text-sm font-semibold text-[#6B645D] hover:text-ink"
           >
             Cancel
           </button>

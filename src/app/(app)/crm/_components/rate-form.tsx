@@ -6,9 +6,9 @@ import { setBillingRate } from "../actions";
 import AddModal from "../../_components/add-modal";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
 const smallBtn =
-  "bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide px-3.5 py-2 rounded-full transition-colors";
+  "min-h-11 bg-brand hover:bg-brand-hover text-ink text-sm font-bold px-3.5 py-2 rounded-[14px] transition-colors";
 
 // Quick "set a new dated billing arrangement" — Hourly rate or Fixed hours/week.
 export default function BillingRateForm({ clientId }: { clientId: string }) {
@@ -17,7 +17,7 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
   return (
     <AddModal
       title="Set New Rate"
-      triggerClassName="mt-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand"
+      triggerClassName="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[#B34100]"
       trigger={
         <>
           <Plus className="w-3.5 h-3.5" /> Set new rate
@@ -40,7 +40,7 @@ export default function BillingRateForm({ clientId }: { clientId: string }) {
               />
               <span
                 className={`inline-block px-3 py-1 rounded-full text-xs font-bold transition ${
-                  type === t ? "bg-brand text-white" : "text-ink/60"
+                  type === t ? "bg-brand text-ink" : "text-ink/60"
                 }`}
               >
                 {t === "HOURLY" ? "Hourly" : "Fixed"}

@@ -11,7 +11,7 @@ export default function AssigneePicker({
   initial,
 }: {
   taskId: string;
-  projectId: string;
+  projectId: string | null;
   users: { id: string; name: string; role: string }[];
   initial: string[];
 }) {
@@ -46,7 +46,7 @@ export default function AssigneePicker({
             >
               <span
                 className={`w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center ${
-                  on ? "bg-brand text-white" : "bg-cream text-ink/50"
+                  on ? "bg-brand text-ink" : "bg-cream text-ink/50"
                 }`}
               >
                 {initials(u.name)}

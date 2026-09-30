@@ -18,7 +18,7 @@ export default async function ProjectsPage({
         {showInactive ? (
           <Link
             href="/projects"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
+            className="-ml-1 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-[#B34100] hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to clients
@@ -34,7 +34,7 @@ export default async function ProjectsPage({
         )}
         <Link
           href="/projects/new"
-          className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
+          className="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-ink font-bold text-sm px-4 py-2.5 rounded-[14px] transition-colors"
         >
           <Plus className="w-4 h-4" />
           New Project
@@ -95,7 +95,7 @@ async function ArchivedView() {
 
   return (
     <div className="space-y-8">
-      <h2 className="font-display text-2xl tracking-wide text-ink">Archived &amp; churned projects</h2>
+      <h2 className="text-[17px] font-bold text-ink">Archived &amp; churned projects</h2>
 
       {projects.length === 0 ? (
         <div className="bg-white border border-dashed border-black/15 rounded-2xl p-14 text-center">
@@ -111,14 +111,14 @@ async function ArchivedView() {
               {g.id ? (
                 <Link href={`/crm/${g.id}`} className="flex items-center gap-2 group/client">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ background: g.color ?? "#cbd5e1" }} />
-                  <h3 className="font-display text-2xl tracking-wide text-ink group-hover/client:text-brand transition-colors">
+                  <h3 className="text-[17px] font-bold text-ink group-hover/client:text-brand transition-colors">
                     {g.name}
                   </h3>
                 </Link>
               ) : (
                 <div className="flex items-center gap-2 text-black/40">
                   <Building2 className="w-4 h-4" />
-                  <h3 className="font-display text-2xl tracking-wide">{g.name}</h3>
+                  <h3 className="text-[17px] font-bold">{g.name}</h3>
                 </div>
               )}
               <span className="text-xs font-semibold text-black/35">

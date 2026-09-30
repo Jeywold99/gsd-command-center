@@ -40,6 +40,51 @@ body {
   font-family: var(--font-outfit), system-ui, sans-serif;
 }
 
+/* ── App feel (mobile / installed PWA) ─────────────────────────────────────── */
+/* No grey tap flash, no 300ms double-tap delay, no rubber-band scroll of the
+   whole page behind fixed bars. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary {
+  touch-action: manipulation;
+}
+body {
+  overscroll-behavior-y: none;
+}
+/* iOS Safari zooms the page into any field under 16px on focus — keep form
+   fields at 16px on phones/tablets. */
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Safe areas (notch / home indicator) — the root layout sets
+   viewport-fit=cover, so the app draws edge-to-edge. */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* Room for the floating mobile tab bar (64px bar + 22px gap + home indicator). */
+@utility pb-tabbar {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 104px);
+}
+@utility bottom-tabbar {
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+}
+
 /* ── BlockNote (task Notes editor) ────────────────────────────────────────── */
 /* The drag-handle menu (delete / colour) opens leftward from the block's left
    gutter, so its left edge lands over the fixed sidebar. BlockNote renders this
@@ -59,6 +104,25 @@ body {
    that instead of overriding it, doubling the shift mid-animation and
    snapping back once the animation ends — exactly the "jumps left, then
    jumps to center" glitch this caused before. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
 @keyframes saved-pop {
   0% {
     opacity: 0;

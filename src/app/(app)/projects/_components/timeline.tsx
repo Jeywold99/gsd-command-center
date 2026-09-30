@@ -105,7 +105,7 @@ export default function Timeline({
   const trackMinWidth = Math.max(months.length * 130, 640);
 
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.07] p-4">
+    <div className="bg-white rounded-[22px] border border-black/[0.07] p-4">
       <div className="flex">
         {/* Labels column */}
         <div className="w-44 shrink-0 pr-3">

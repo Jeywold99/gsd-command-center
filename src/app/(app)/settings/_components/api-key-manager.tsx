@@ -39,7 +39,7 @@ export default function ApiKeyManager({ initial }: { initial: Row[] }) {
           <p className="text-xs font-bold uppercase tracking-wide text-brand mb-1">
             Copy this key now — it won&apos;t be shown again
           </p>
-          <code className="block bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink break-all select-all">
+          <code className="block bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink break-all select-all">
             {created}
           </code>
           <button
@@ -53,20 +53,20 @@ export default function ApiKeyManager({ initial }: { initial: Row[] }) {
 
       <form onSubmit={create} className="flex flex-wrap items-end gap-3">
         <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5">
+          <label className="block text-xs font-semibold text-[#6B645D] mb-1.5">
             Key name
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="n8n production"
-            className="w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+            className="w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
           />
         </div>
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover disabled:opacity-60 text-white font-bold uppercase tracking-wide text-sm px-4 py-2 rounded-full transition-colors"
+          className="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover disabled:opacity-60 text-ink font-bold text-sm px-4 py-2 rounded-[14px] transition-colors"
         >
           <Key className="w-4 h-4" />
           {busy ? "Generating…" : "Generate Key"}

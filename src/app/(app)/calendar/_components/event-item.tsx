@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Video, Users, CalendarClock } from "lucide-react";
+import { Video, Users, CalendarClock, BellRing } from "lucide-react";
 import EventModal, { type CalEvent, type ClientOpt, type UserOpt } from "./event-modal";
 import { initials } from "../../projects/_components/task-badges";
 
 const TYPE_LABEL: Record<string, string> = {
   MEETING: "Meeting",
   CONTENT_PUBLISH: "Content",
+  REMINDER: "Reminder",
   OTHER: "Other",
 };
 
@@ -35,7 +36,7 @@ export default function EventItem({
   event: CalEvent;
   clients: ClientOpt[];
   users: UserOpt[];
-  variant: "pill" | "row" | "card";
+  variant: "pill" | "row" | "card" | "agenda";
 }) {
   const [open, setOpen] = useState(false);
   const color = event.client?.colorHex ?? "#ff5c00";
@@ -52,11 +53,53 @@ export default function EventItem({
         >
           <span className="truncate">{event.title}</span>
         </button>
+      ) : variant === "agenda" ? (
+        // Phone agenda block (see mobile-agenda.tsx): tinted by type.
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={`flex w-full min-h-[60px] items-center gap-2.5 rounded-[18px] px-3.5 py-3 text-left ${
+            event.type === "MEETING"
+              ? "bg-midnight text-white"
+              : event.type === "REMINDER"
+                ? "bg-brand-pale text-[#6E2800]"
+                : event.type === "CONTENT_PUBLISH"
+                  ? "bg-[#ECE7FB] text-[#3B2785]"
+                  : "bg-white border border-black/[0.07] text-ink"
+          }`}
+        >
+          {event.type === "REMINDER" ? (
+            <BellRing className="w-[18px] h-[18px] shrink-0" />
+          ) : event.meetingUrl ? (
+            <Video className="w-[18px] h-[18px] shrink-0" />
+          ) : null}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-bold">{event.title}</span>
+            <span className={`block truncate text-[13px] ${event.type === "MEETING" ? "text-white/70" : "opacity-80"}`}>
+              {[TYPE_LABEL[event.type] ?? event.type, event.client?.companyName, event.location]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </span>
+          {event.attendees.length > 0 && (
+            <span className="flex shrink-0 -space-x-2">
+              {event.attendees.slice(0, 3).map((a) => (
+                <span
+                  key={a.user.id}
+                  title={a.user.name}
+                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-brand text-[10px] font-bold text-ink ring-2 ring-white/80"
+                >
+                  {initials(a.user.name)}
+                </span>
+              ))}
+            </span>
+          )}
+        </button>
       ) : variant === "card" ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="bg-white rounded-2xl border border-black/[0.07] p-5 hover:border-brand/40 hover:shadow-sm transition text-left flex flex-col gap-3"
+          className="bg-white rounded-[22px] border border-black/[0.07] p-5 hover:border-brand/40 hover:shadow-sm transition text-left flex flex-col gap-3"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2.5 min-w-0">

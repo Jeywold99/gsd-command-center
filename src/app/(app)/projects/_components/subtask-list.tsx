@@ -11,7 +11,7 @@ export default function SubtaskList({
   initial,
 }: {
   parentId: string;
-  projectId: string;
+  projectId: string | null;
   initial: Sub[];
 }) {
   const [subs, setSubs] = useState<Sub[]>(initial);
@@ -60,7 +60,7 @@ export default function SubtaskList({
           value={val}
           onChange={(e) => setVal(e.target.value)}
           placeholder="+ Add subtask"
-          className="w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
+          className="w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
         />
       </form>
     </div>

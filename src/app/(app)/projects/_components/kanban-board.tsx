@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -144,7 +145,7 @@ function TaskCard({ task, projectId }: { task: BoardTask; projectId: string }) {
       {...attributes}
       {...listeners}
       onClick={() => router.push(`/projects/${projectId}/tasks/${task.id}`)}
-      className="bg-white rounded-xl border border-black/10 p-3 shadow-sm cursor-grab active:cursor-grabbing hover:border-brand/40 transition-colors"
+      className="bg-white rounded-2xl border border-transparent p-3.5 shadow-[0_1px_2px_rgba(26,26,26,0.06)] cursor-grab active:cursor-grabbing hover:border-brand/40 transition-colors"
     >
       <CardBody task={task} />
     </div>
@@ -168,7 +169,8 @@ function AddCard({ container, onAdd }: { container: string; onAdd: (c: string, t
         value={val}
         onChange={(e) => setVal(e.target.value)}
         placeholder="+ Add task"
-        className="w-full bg-transparent text-sm px-2 py-1.5 rounded-lg border border-transparent hover:border-black/10 focus:border-brand focus:bg-white focus:outline-none placeholder:text-black/35 transition"
+        aria-label="Add task"
+        className="w-full min-h-11 bg-transparent text-sm px-2.5 rounded-xl border border-transparent hover:border-black/10 focus:border-brand focus:bg-white focus:outline-none placeholder:text-[#6B645D] transition"
       />
     </form>
   );
@@ -189,10 +191,10 @@ function Column({
 }) {
   const { setNodeRef } = useDroppable({ id: container });
   return (
-    <div className="bg-cream rounded-xl border border-black/[0.06] p-2.5 flex flex-col">
-      <div className="flex items-center justify-between px-1 mb-2">
-        <span className="text-[10px] font-bold uppercase tracking-wide text-ink/50">{label}</span>
-        <span className="text-[10px] font-bold text-ink/30">{tasks.length}</span>
+    <div className="flex w-[80%] shrink-0 snap-start flex-col rounded-[20px] bg-[#EFE9E2] p-3 lg:w-auto">
+      <div className="mb-2.5 flex items-center justify-between px-1">
+        <span className="text-sm font-bold text-ink">{label}</span>
+        <span className="text-[13px] font-semibold text-[#6B645D]">{tasks.length}</span>
       </div>
       <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <div ref={setNodeRef} className="space-y-2 min-h-[24px]">
@@ -234,7 +236,7 @@ function Swimlane({
     <div className="space-y-2">
       {!bare && (
         <div
-          className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
+          className={`flex min-h-12 flex-wrap items-center gap-2 rounded-2xl px-3.5 py-2 ${
             phase ? "bg-white border border-black/[0.07]" : "bg-transparent"
           }`}
         >
@@ -260,7 +262,8 @@ function Swimlane({
           <span className="ml-auto text-xs font-semibold text-black/35">{count} task{count === 1 ? "" : "s"}</span>
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+      {/* Phones: swipe sideways through the four columns; desktop: a grid. */}
+      <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-2.5 overflow-x-auto px-4 pb-1 sm:-mx-5 sm:scroll-px-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-4 [scrollbar-width:none]">
         {COLUMNS.map((c) => (
           <Column
             key={c.status}
@@ -294,7 +297,10 @@ export default function KanbanBoard({
   }, [cols]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // Mouse: drag after 6px. Touch: long-press (250ms) to drag, so a swipe
+    // still scrolls the columns sideways on phones.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   );
 
   const activeTask = activeId
@@ -371,6 +377,7 @@ export default function KanbanBoard({
 
   return (
     <DndContext
+      id="project-board"
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={onDragStart}

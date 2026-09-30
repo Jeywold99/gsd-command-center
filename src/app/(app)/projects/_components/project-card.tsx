@@ -18,7 +18,7 @@ export default function ProjectCard({ p }: { p: ProjectRow }) {
   return (
     <Link
       href={`/projects/${p.id}`}
-      className="bg-white rounded-2xl border border-black/[0.07] p-5 hover:border-brand/40 hover:shadow-sm transition group"
+      className="bg-white rounded-[22px] border border-black/[0.07] p-5 hover:border-brand/40 hover:shadow-sm transition group"
     >
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-bold text-ink leading-snug group-hover:text-brand transition-colors">

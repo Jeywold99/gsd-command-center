@@ -11,8 +11,8 @@ import Timer from "./_components/timer";
 import { addManualEntry, deleteEntry } from "./actions";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
-const label = "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+const label = "block text-xs font-semibold text-[#6B645D] mb-1.5";
 
 export default async function TimePage() {
   const session = await verifySession();
@@ -55,15 +55,15 @@ export default async function TimePage() {
 
       {/* Rollups */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-black/[0.07] p-5">
+        <div className="bg-white rounded-[22px] border border-black/[0.07] p-5">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">Today</span>
           <p className="mt-1 font-display text-4xl tracking-wide text-ink">{fmtDuration(totalToday)}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-black/[0.07] p-5">
+        <div className="bg-white rounded-[22px] border border-black/[0.07] p-5">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">This Week</span>
           <p className="mt-1 font-display text-4xl tracking-wide text-ink">{fmtDuration(totalWeek)}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-black/[0.07] p-5">
+        <div className="bg-white rounded-[22px] border border-black/[0.07] p-5">
           <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink/45">By Client (wk)</span>
           <div className="mt-2 space-y-0.5 text-sm">
             {byClient.size === 0 ? (
@@ -83,7 +83,7 @@ export default async function TimePage() {
       {/* Manual entry */}
       <form
         action={addManualEntry}
-        className="bg-white rounded-2xl border border-black/[0.07] p-5 grid grid-cols-2 sm:grid-cols-5 gap-3 items-end"
+        className="bg-white rounded-[22px] border border-black/[0.07] p-5 grid grid-cols-2 sm:grid-cols-5 gap-3 items-end"
       >
         <div className="col-span-2 sm:col-span-1">
           <label className={label}>Project</label>
@@ -115,7 +115,7 @@ export default async function TimePage() {
           </label>
           <button
             type="submit"
-            className="bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide px-4 py-2 rounded-full transition-colors"
+            className="min-h-11 bg-brand hover:bg-brand-hover text-ink text-sm font-bold px-4 py-2 rounded-[14px] transition-colors"
           >
             Add
           </button>
@@ -124,13 +124,13 @@ export default async function TimePage() {
 
       {/* Entries this week */}
       <div>
-        <h3 className="font-display text-2xl tracking-wide text-ink mb-3">This Week&apos;s Entries</h3>
+        <h3 className="text-[17px] font-bold text-ink mb-3">This Week&apos;s Entries</h3>
         {entries.length === 0 ? (
           <div className="bg-white border border-dashed border-black/15 rounded-2xl p-10 text-center">
             <p className="text-black/50">No time logged this week yet. Start the timer or add an entry.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-black/[0.07] divide-y divide-black/[0.05]">
+          <div className="bg-white rounded-[22px] border border-black/[0.07] divide-y divide-black/[0.05]">
             {entries.map((e) => (
               <div key={e.id} className="flex items-center gap-4 px-5 py-3">
                 <div className="min-w-0 flex-1">

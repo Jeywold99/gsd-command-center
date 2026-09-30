@@ -24,6 +24,7 @@ export default function AddModal({
   triggerAriaLabel,
   title,
   panelClassName,
+  defaultOpen = false,
   children,
 }: {
   trigger: ReactNode;
@@ -34,9 +35,11 @@ export default function AddModal({
   triggerAriaLabel?: string;
   title: string;
   panelClassName?: string;
+  // Open on first render (e.g. arriving from the Create sheet with ?new=1).
+  defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   useEffect(() => {
     if (!open) return;
@@ -59,29 +62,35 @@ export default function AddModal({
       </button>
 
       {open && (
+        // Phones: a bottom sheet (scrolls inside, clears the home indicator).
+        // sm+: a centered panel that scrolls with the page.
         <div
-          className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-8"
+          className="fixed inset-0 z-[70] flex items-end justify-center bg-[rgba(20,20,30,0.55)] animate-[fade-in_150ms_ease-out] sm:items-start sm:overflow-y-auto sm:p-8"
           onClick={() => setOpen(false)}
           role="dialog"
           aria-modal="true"
+          aria-label={title}
         >
           <div
-            className={`w-full rounded-2xl bg-white shadow-2xl ${panelClassName ?? "max-w-lg"}`}
+            className={`flex max-h-[92dvh] w-full flex-col rounded-t-[28px] bg-white shadow-2xl animate-[sheet-up_220ms_cubic-bezier(0.2,0.8,0.2,1)] sm:max-h-none sm:rounded-[24px] ${panelClassName ?? "max-w-lg"}`}
             onClick={(e) => e.stopPropagation()}
             onSubmit={() => setOpen(false)}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-black/[0.07] px-6 py-4">
-              <h2 className="font-display text-2xl tracking-wide text-ink">{title}</h2>
+            <div className="mx-auto mt-2.5 h-[5px] w-10 shrink-0 rounded-full bg-[#D9D2CA] sm:hidden" />
+            <div className="flex shrink-0 items-center justify-between gap-3 px-5 pt-3 pb-3 sm:px-6 sm:pt-5">
+              <h2 className="text-xl font-bold text-ink">{title}</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="p-1.5 rounded-lg text-ink/40 hover:text-ink hover:bg-black/[0.04] shrink-0"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[#F1ECE6] text-ink"
                 aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-[18px] h-[18px]" strokeWidth={2.4} />
               </button>
             </div>
-            <div className="px-6 py-5">{children}</div>
+            <div className="overflow-y-auto px-5 pt-1 pb-[calc(env(safe-area-inset-bottom)+20px)] sm:overflow-visible sm:px-6 sm:pb-6">
+              {children}
+            </div>
           </div>
         </div>
       )}

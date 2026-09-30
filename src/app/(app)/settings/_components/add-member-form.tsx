@@ -5,8 +5,8 @@ import { UserPlus } from "lucide-react";
 import { createUser } from "../team-actions";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
-const label = "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+const label = "block text-xs font-semibold text-[#6B645D] mb-1.5";
 
 export default function AddMemberForm() {
   const [state, action, pending] = useActionState(createUser, undefined);
@@ -62,7 +62,7 @@ export default function AddMemberForm() {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover disabled:opacity-60 text-white text-xs font-bold uppercase tracking-wide px-4 py-2.5 rounded-full transition-colors"
+          className="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover disabled:opacity-60 text-ink text-sm font-bold px-4 py-2.5 rounded-[14px] transition-colors"
         >
           <UserPlus className="w-4 h-4" />
           {pending ? "Adding…" : "Add member"}

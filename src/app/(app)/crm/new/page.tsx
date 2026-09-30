@@ -11,7 +11,7 @@ export default async function NewClientPage() {
     <div className="space-y-6">
       <Link
         href="/crm"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
+        className="-ml-1 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-[#B34100] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to CRM
@@ -20,7 +20,7 @@ export default async function NewClientPage() {
         <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand">
           New Record
         </span>
-        <h2 className="mt-1 font-display text-4xl tracking-wide text-ink">
+        <h2 className="mt-1 font-display text-[44px] leading-[0.95] tracking-[0.01em] text-ink lg:text-[56px]">
           Add Client or Lead
         </h2>
       </div>

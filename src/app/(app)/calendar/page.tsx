@@ -8,10 +8,12 @@ import EventList from "./_components/event-list";
 import EventItem from "./_components/event-item";
 import { initials } from "../projects/_components/task-badges";
 import AddModal from "../_components/add-modal";
+import { taskPath } from "@/lib/task-path";
+import MobileAgenda from "./_components/mobile-agenda";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
-const label = "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+const label = "block text-xs font-semibold text-[#6B645D] mb-1.5";
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const monthParam = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -113,7 +115,7 @@ function EventFormFields({
       </label>
       <button
         type="submit"
-        className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
+        className="min-h-11 w-full bg-brand hover:bg-brand-hover text-ink text-sm font-bold py-2.5 rounded-[14px] transition-colors"
       >
         Add Event
       </button>
@@ -124,10 +126,11 @@ function EventFormFields({
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; user?: string }>;
+  searchParams: Promise<{ month?: string; user?: string; new?: string }>;
 }) {
   const session = await verifySession();
-  const { month, user } = await searchParams;
+  const { month, user, new: newParam } = await searchParams;
+  const isNew = newParam === "1";
   const now = new Date();
   const [y, m] = (month ?? monthParam(now)).split("-").map(Number);
   const year = y;
@@ -200,7 +203,8 @@ export default async function CalendarPage({
 
         <AddModal
           title="New Event"
-          triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors"
+          defaultOpen={isNew}
+          triggerClassName="inline-flex h-11 items-center gap-2 bg-brand hover:bg-brand-hover text-ink font-bold text-sm px-4 rounded-[14px] transition-colors"
           trigger={
             <>
               <Plus className="w-4 h-4" /> New Event
@@ -232,8 +236,26 @@ export default async function CalendarPage({
         </Link>
       </div>
 
-      {/* Month grid */}
-      <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
+      {/* Phones: week strip + agenda */}
+      <MobileAgenda
+        events={events}
+        tasks={taskDates
+          .filter((t) => t.dueDate)
+          .map((t) => ({
+            id: t.id,
+            title: t.title,
+            dueDate: t.dueDate!,
+            href: taskPath(t.id, t.projectId),
+            subtitle: t.project?.client?.companyName ?? t.project?.name ?? null,
+          }))}
+        clients={clients}
+        users={users}
+        rangeFrom={rangeFrom.toISOString()}
+        rangeTo={rangeTo.toISOString()}
+      />
+
+      {/* Month grid (desktop) */}
+      <div className="hidden lg:block bg-white rounded-[22px] border border-black/[0.07] overflow-hidden">
         <div className="grid grid-cols-7 border-b border-black/[0.06]">
           {WEEKDAYS.map((d) => (
             <div key={d} className="px-2 py-2 text-[11px] font-bold uppercase tracking-wide text-ink/40 text-center">
@@ -295,7 +317,7 @@ export default async function CalendarPage({
                 <div className="relative z-10 flex justify-end">
                   <span
                     className={`text-[11px] font-semibold w-5 h-5 flex items-center justify-center rounded-full ${
-                      isToday ? "bg-brand text-white" : inMonth ? "text-ink/60" : "text-ink/25"
+                      isToday ? "bg-brand text-ink" : inMonth ? "text-ink/60" : "text-ink/25"
                     }`}
                   >
                     {day.getDate()}
@@ -307,7 +329,7 @@ export default async function CalendarPage({
                   ))}
                   {shownDue.map((t) => {
                     const color = t.project?.client?.colorHex ?? "#94a3b8";
-                    const href = t.projectId ? `/projects/${t.projectId}/tasks/${t.id}` : null;
+                    const href = taskPath(t.id, t.projectId);
                     const pill = (
                       <div
                         className="flex items-center gap-1 text-[11px] text-ink/80 rounded px-1 py-0.5 truncate hover:bg-cream"
@@ -327,7 +349,7 @@ export default async function CalendarPage({
                   })}
                   {shownStart.map((t) => {
                     const color = t.project?.client?.colorHex ?? "#94a3b8";
-                    const href = t.projectId ? `/projects/${t.projectId}/tasks/${t.id}` : null;
+                    const href = taskPath(t.id, t.projectId);
                     const pill = (
                       <div
                         className="flex items-center gap-1 text-[11px] text-ink/60 rounded px-1 py-0.5 truncate hover:bg-cream"
@@ -355,9 +377,9 @@ export default async function CalendarPage({
         </div>
       </div>
 
-      {/* Agenda */}
-      <div>
-        <h3 className="font-display text-2xl tracking-wide text-ink mb-3">Events this month</h3>
+      {/* Agenda (desktop — phones have the day agenda above) */}
+      <div className="hidden lg:block">
+        <h3 className="text-[17px] font-bold text-ink mb-3">Events this month</h3>
         <EventList events={events} clients={clients} users={users} />
       </div>
     </div>

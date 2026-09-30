@@ -10,7 +10,7 @@ import AddModal from "../../_components/add-modal";
 import { createMilestone } from "../actions";
 
 const mInput =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition";
 
 export default async function ProjectDetailPage({
   params,
@@ -34,18 +34,18 @@ export default async function ProjectDetailPage({
     <div className="space-y-6">
       <Link
         href={`/projects/client/${project.client?.id ?? "internal"}`}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
+        className="-ml-1 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-[#B34100] hover:underline"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to {project.client ? project.client.companyName : "Internal Projects"}
       </Link>
 
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-black/[0.07] p-6">
+      <div className="bg-white rounded-[22px] border border-black/[0.07] p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="font-display text-4xl tracking-wide text-ink leading-none">
+              <h2 className="font-display text-[44px] leading-[0.95] tracking-[0.01em] text-ink lg:text-[56px]">
                 {project.name}
               </h2>
               <ProjectStatusBadge status={project.status} />
@@ -82,12 +82,12 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* Phases / Milestones */}
-      <section className="bg-white rounded-2xl border border-black/[0.07] p-6">
+      <section className="bg-white rounded-[22px] border border-black/[0.07] p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-2xl tracking-wide text-ink">Phases</h3>
+          <h3 className="text-[17px] font-bold text-ink">Phases</h3>
           <AddModal
             title="Add Phase"
-            triggerClassName="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand"
+            triggerClassName="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[#B34100]"
             trigger={
               <>
                 <Plus className="w-3.5 h-3.5" /> Add phase
@@ -109,7 +109,7 @@ export default async function ProjectDetailPage({
               />
               <button
                 type="submit"
-                className="w-full bg-brand hover:bg-brand-hover text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
+                className="min-h-11 w-full bg-brand hover:bg-brand-hover text-ink text-sm font-bold py-2.5 rounded-[14px] transition-colors"
               >
                 Add Phase
               </button>

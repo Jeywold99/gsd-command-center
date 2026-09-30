@@ -8,6 +8,7 @@ import { notifyMany } from "@/lib/notifications";
 import { saveFile } from "@/lib/storage";
 import { regenerateIfRecurring } from "@/lib/recurrence";
 import { str, date } from "@/lib/forms";
+import { taskPath } from "@/lib/task-path";
 import type { ClientFormState } from "@/lib/definitions";
 
 // ── Projects ──
@@ -193,10 +194,11 @@ export async function updateTask(formData: FormData) {
   // Preserve where the user came from (global Tasks board vs project board).
   const fromTasks = str(formData.get("from")) === "tasks";
   if (projectId) revalidatePath(`/projects/${projectId}`);
-  revalidatePath(`/projects/${projectId}/tasks/${id}`);
+  revalidatePath("/tasks");
+  revalidatePath(taskPath(id, projectId));
   const params = new URLSearchParams({ saved: "1" });
-  if (fromTasks) params.set("from", "tasks");
-  redirect(`/projects/${projectId}/tasks/${id}?${params.toString()}`);
+  if (fromTasks && projectId) params.set("from", "tasks");
+  redirect(`${taskPath(id, projectId)}?${params.toString()}`);
 }
 
 export async function deleteTask(formData: FormData) {
@@ -206,20 +208,15 @@ export async function deleteTask(formData: FormData) {
   const fromTasks = str(formData.get("from")) === "tasks";
   if (!id) return;
   await prisma.task.delete({ where: { id } });
-  // Return to wherever the task was opened from.
-  if (fromTasks) {
-    revalidatePath("/tasks");
-    if (projectId) revalidatePath(`/projects/${projectId}`);
-    redirect("/tasks");
-  }
-  if (projectId) {
-    revalidatePath(`/projects/${projectId}`);
-    redirect(`/projects/${projectId}`);
-  }
+  // Return to wherever the task was opened from (inbox tasks: the Tasks page).
+  revalidatePath("/tasks");
+  if (projectId) revalidatePath(`/projects/${projectId}`);
+  if (fromTasks || !projectId) redirect("/tasks");
+  redirect(`/projects/${projectId}`);
 }
 
 // Replace the full assignee set for a task.
-export async function setAssignees(taskId: string, projectId: string, userIds: string[]) {
+export async function setAssignees(taskId: string, projectId: string | null, userIds: string[]) {
   const session = await verifySession();
 
   // Who was already assigned — so we only notify the genuinely new ones.
@@ -251,12 +248,12 @@ export async function setAssignees(taskId: string, projectId: string, userIds: s
       body: task?.title ?? null,
       entityType: "task",
       entityId: taskId,
-      linkUrl: `/projects/${projectId}/tasks/${taskId}`,
+      linkUrl: taskPath(taskId, projectId),
     });
   }
 
-  revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(taskPath(taskId, projectId));
+  if (projectId) revalidatePath(`/projects/${projectId}`);
 }
 
 // Bulk-edit several tasks at once from the /tasks table view. Every field is
@@ -321,22 +318,27 @@ export async function bulkUpdateTasks(
 }
 
 // Returns the created subtask so the client list can append it.
-export async function createSubtask(parentId: string, projectId: string, title: string) {
+export async function createSubtask(parentId: string, projectId: string | null, title: string) {
   await verifySession();
   if (!title.trim()) return null;
   const sub = await prisma.task.create({
-    data: { title: title.trim(), parentId, projectId, status: "TODO" },
+    data: { title: title.trim(), parentId, projectId: projectId || null, status: "TODO" },
   });
   return { id: sub.id, title: sub.title, done: false };
 }
 
-export async function toggleSubtask(subtaskId: string, parentId: string, projectId: string, done: boolean) {
+export async function toggleSubtask(
+  subtaskId: string,
+  parentId: string,
+  projectId: string | null,
+  done: boolean,
+) {
   await verifySession();
   await prisma.task.update({
     where: { id: subtaskId },
     data: { status: done ? "DONE" : "TODO", completedAt: done ? new Date() : null },
   });
-  revalidatePath(`/projects/${projectId}/tasks/${parentId}`);
+  revalidatePath(taskPath(parentId, projectId));
 }
 
 // ── Milestones / phases ──
@@ -408,7 +410,7 @@ export async function createReminder(formData: FormData) {
       createdById: session.userId,
     },
   });
-  if (projectId) revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
+  revalidatePath(taskPath(taskId, projectId));
 }
 
 export async function deleteReminder(formData: FormData) {
@@ -418,19 +420,20 @@ export async function deleteReminder(formData: FormData) {
   const taskId = str(formData.get("taskId"));
   if (!id) return;
   await prisma.reminder.delete({ where: { id } });
-  if (projectId && taskId) revalidatePath(`/projects/${projectId}/tasks/${taskId}`);
+  if (taskId) revalidatePath(taskPath(taskId, projectId));
 }
 
-// Quick-add a task from the global Tasks page (any authenticated user).
+// Quick-add a task from the global Tasks page (any authenticated user). No
+// project → an inbox task.
 export async function quickAddTask(formData: FormData) {
   const session = await verifySession();
   const projectId = str(formData.get("projectId"));
   const title = str(formData.get("title"));
-  if (!projectId || !title) return;
+  if (!title) return;
 
   const status = str(formData.get("status")) ?? "TODO";
   const max = await prisma.task.aggregate({
-    where: { projectId, status: status as never, parentId: null },
+    where: { projectId: projectId ?? null, status: status as never, parentId: null },
     _max: { position: true },
   });
 
@@ -471,17 +474,17 @@ export async function quickAddTask(formData: FormData) {
         body: task.title,
         entityType: "task",
         entityId: task.id,
-        linkUrl: `/projects/${projectId}/tasks/${task.id}`,
+        linkUrl: taskPath(task.id, projectId),
       },
     );
   }
 
   revalidatePath("/tasks");
-  revalidatePath(`/projects/${projectId}`);
+  if (projectId) revalidatePath(`/projects/${projectId}`);
   // Land straight on the new task's page — not back on the board — so adding
   // Notes, subtasks, or a reminder right after creating is one step, not
   // "save, then hunt for the card, then click it."
-  redirect(`/projects/${projectId}/tasks/${task.id}?saved=1`);
+  redirect(`${taskPath(task.id, projectId)}?saved=1`);
 }
 
 // ── Notes editor file uploads (BlockNote image/file/video/audio blocks) ──

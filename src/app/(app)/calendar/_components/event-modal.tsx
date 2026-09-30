@@ -6,8 +6,8 @@ import { updateEvent, deleteEvent } from "../actions";
 import { announceSaved } from "../../_components/saved-toast";
 
 const input =
-  "w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
-const label = "block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5";
+  "w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20";
+const label = "block text-xs font-semibold text-[#6B645D] mb-1.5";
 
 export type CalEvent = {
   id: string;
@@ -40,6 +40,7 @@ function toLocalInput(d: Date | string | null): string {
 const TYPE_LABEL: Record<string, string> = {
   MEETING: "Meeting",
   CONTENT_PUBLISH: "Content",
+  REMINDER: "Reminder",
   OTHER: "Other",
 };
 
@@ -122,7 +123,7 @@ export default function EventModal({
               className="mt-1.5 w-3 h-3 rounded-full shrink-0"
               style={{ background: event.client?.colorHex ?? "#ff5c00" }}
             />
-            <h2 className="font-display text-2xl tracking-wide text-ink leading-tight break-words">
+            <h2 className="text-[17px] font-bold text-ink leading-tight break-words">
               {event.title}
             </h2>
           </div>
@@ -235,14 +236,14 @@ export default function EventModal({
               <button
                 type="submit"
                 disabled={saving}
-                className="bg-brand hover:bg-brand-hover text-white text-xs font-bold uppercase tracking-wide px-4 py-2 rounded-full transition-colors"
+                className="min-h-11 bg-brand hover:bg-brand-hover text-ink text-sm font-bold px-4 py-2 rounded-[14px] transition-colors"
               >
                 {saving ? "Saving…" : "Save changes"}
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="text-xs font-semibold text-ink/50 hover:text-ink"
+                className="min-h-11 px-2 text-sm font-semibold text-[#6B645D] hover:text-ink"
               >
                 Cancel
               </button>

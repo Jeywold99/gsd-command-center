@@ -14,9 +14,18 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { CalendarClock, Repeat, ChevronRight } from "lucide-react";
-import { COLUMNS, PRIORITY, initials, fmtDate, groupByClient } from "../../projects/_components/task-badges";
+import { CalendarClock, Repeat, ChevronRight, Mic } from "lucide-react";
+import { COLUMNS, initials, fmtDate, groupByClient } from "../../projects/_components/task-badges";
+import PriorityChip from "../../_components/priority-chip";
+
+const STATUS_DOT: Record<string, string> = {
+  TODO: "bg-[#6B645D]",
+  IN_PROGRESS: "bg-brand",
+  IN_REVIEW: "bg-community",
+  DONE: "bg-success",
+};
 import { moveTaskStatus } from "../../projects/actions";
+import { taskPath } from "@/lib/task-path";
 
 type BoardTask = {
   id: string;
@@ -25,6 +34,7 @@ type BoardTask = {
   priority: string;
   dueDate: Date | string | null;
   recurrence?: string | null;
+  voiceNoteId?: string | null;
   project: {
     id: string;
     name: string;
@@ -47,37 +57,42 @@ function containerOf(cols: Cols, id: string): string | null {
 }
 
 function CardBody({ task }: { task: BoardTask }) {
-  const p = PRIORITY[task.priority] ?? PRIORITY.MEDIUM;
   return (
-    <>
-      <p className="text-sm font-semibold text-ink leading-snug flex items-center gap-1.5">
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[#6B645D]">
+        <span className="flex min-w-0 items-center gap-1.5 truncate">
+          {task.voiceNoteId && !task.project && <Mic className="w-3 h-3 shrink-0 text-[#B34100]" aria-label="From a voice note" />}
+          {task.project?.client && (
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: task.project.client.colorHex ?? "#cbd5e1" }} />
+          )}
+          <span className="truncate">
+            {task.project
+              ? task.project.client
+                ? `${task.project.client.companyName} · ${task.project.name}`
+                : task.project.name
+              : task.voiceNoteId
+                ? "Voice · Inbox"
+                : "Inbox"}
+          </span>
+        </span>
+        <PriorityChip priority={task.priority} />
+      </div>
+      <p className="flex items-center gap-1.5 text-[15px] font-semibold leading-snug text-ink">
         {task.recurrence && (
           <span title="Repeats" className="shrink-0">
-            <Repeat className="w-3 h-3 text-black/35" />
+            <Repeat className="w-3.5 h-3.5 text-[#6B645D]" />
           </span>
         )}
         {task.title}
       </p>
-      <p className="mt-1 text-[11px] text-black/45 truncate">
-        {task.project ? (
-          <>
-            {task.project.client && (
-              <span
-                className="inline-block w-2 h-2 rounded-full mr-1 align-middle"
-                style={{ background: task.project.client.colorHex ?? "#cbd5e1" }}
-              />
-            )}
-            {task.project.client ? `${task.project.client.companyName} · ` : ""}
-            {task.project.name}
-          </>
-        ) : (
-          "Inbox"
-        )}
-      </p>
-      <div className="mt-2 flex items-center justify-between">
-        <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${p.cls}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${p.dot}`} />
-          {p.label}
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1 text-xs font-semibold text-[#6B645D]">
+          {task.dueDate && (
+            <>
+              <CalendarClock className="w-3.5 h-3.5" />
+              {fmtDate(task.dueDate)}
+            </>
+          )}
         </span>
         {task.assignees.length > 0 && (
           <div className="flex -space-x-1.5">
@@ -85,7 +100,7 @@ function CardBody({ task }: { task: BoardTask }) {
               <span
                 key={a.user.id}
                 title={a.user.name}
-                className="w-5 h-5 rounded-full bg-midnight text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white"
+                className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-midnight text-[10px] font-bold text-white ring-2 ring-white"
               >
                 {initials(a.user.name)}
               </span>
@@ -93,13 +108,7 @@ function CardBody({ task }: { task: BoardTask }) {
           </div>
         )}
       </div>
-      {task.dueDate && (
-        <div className="mt-2 flex items-center gap-1 text-[11px] text-black/40">
-          <CalendarClock className="w-3 h-3" />
-          {fmtDate(task.dueDate)}
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
@@ -111,9 +120,9 @@ function TaskCard({ task }: { task: BoardTask }) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      onClick={() => task.project && router.push(`/projects/${task.project.id}/tasks/${task.id}?from=tasks`)}
+      onClick={() => router.push(taskPath(task.id, task.project?.id, "tasks"))}
       style={{ opacity: isDragging ? 0.4 : 1 }}
-      className="bg-white rounded-xl border border-black/10 p-3 shadow-sm transition-colors hover:border-brand/40 cursor-grab active:cursor-grabbing"
+      className="bg-white rounded-2xl border border-transparent p-3.5 shadow-[0_1px_2px_rgba(26,26,26,0.06)] transition-colors hover:border-brand/40 cursor-grab active:cursor-grabbing"
     >
       <CardBody task={task} />
     </div>
@@ -142,13 +151,14 @@ function Column({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-2xl border p-3 flex flex-col transition-colors ${
-        isOver ? "bg-brand-pale/50 border-brand/30" : "bg-cream border-black/[0.06]"
+      className={`rounded-[22px] border p-3 flex flex-col transition-colors ${
+        isOver ? "bg-brand-pale border-brand/30" : "bg-[#EFE9E2] border-transparent"
       }`}
     >
-      <div className="flex items-center justify-between px-1 mb-3">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-ink/60">{label}</span>
-        <span className="text-[11px] font-bold text-ink/35">{tasks.length}</span>
+      <div className="flex items-center gap-2 px-1.5 mb-3">
+        <span className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT[status] ?? "bg-[#6B645D]"}`} />
+        <span className="flex-1 text-sm font-bold text-ink">{label}</span>
+        <span className="text-[13px] font-semibold text-[#6B645D]">{tasks.length}</span>
       </div>
       <div className="space-y-3 min-h-[40px]">
         {clientGroups.map((g) => {
@@ -255,6 +265,7 @@ export default function UserBoard({ tasks }: { tasks: BoardTask[] }) {
 
   return (
     <DndContext
+      id="tasks-board"
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={onDragStart}

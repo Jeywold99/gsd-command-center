@@ -11,7 +11,7 @@ export default function LoginForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5"
+          className="block text-xs font-semibold text-[#6B645D] mb-1.5"
         >
           Email
         </label>
@@ -22,7 +22,7 @@ export default function LoginForm() {
           autoComplete="email"
           required
           placeholder="you@gsdhq.com"
-          className="w-full bg-white border border-black/10 rounded-xl px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
+          className="w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
         />
         {state?.errors?.email && (
           <p className="mt-1 text-xs text-[#c74600]">{state.errors.email[0]}</p>
@@ -32,7 +32,7 @@ export default function LoginForm() {
       <div>
         <label
           htmlFor="password"
-          className="block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5"
+          className="block text-xs font-semibold text-[#6B645D] mb-1.5"
         >
           Password
         </label>
@@ -43,7 +43,7 @@ export default function LoginForm() {
           autoComplete="current-password"
           required
           placeholder="••••••••"
-          className="w-full bg-white border border-black/10 rounded-xl px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
+          className="w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-ink placeholder:text-black/30 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition"
         />
         {state?.errors?.password && (
           <p className="mt-1 text-xs text-[#c74600]">{state.errors.password[0]}</p>
@@ -59,7 +59,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full bg-brand hover:bg-brand-hover disabled:opacity-60 text-white font-bold uppercase tracking-wide py-3 rounded-full transition-colors shadow-sm"
+        className="w-full bg-brand hover:bg-brand-hover disabled:opacity-60 text-ink font-bold py-3 rounded-[14px] transition-colors"
       >
         {pending ? "Signing in…" : "Sign In →"}
       </button>

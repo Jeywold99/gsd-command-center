@@ -23,7 +23,7 @@ export default async function VaultPage({
         {showChurned ? (
           <Link
             href="/vault"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink/50 hover:text-ink"
+            className="-ml-1 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-semibold text-[#B34100] hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to clients
@@ -51,7 +51,7 @@ async function UploadTrigger() {
   return (
     <AddModal
       title="Upload Document"
-      triggerClassName="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide text-sm px-4 py-2.5 rounded-full transition-colors shadow-sm"
+      triggerClassName="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-ink font-bold text-sm px-4 py-2.5 rounded-[14px] transition-colors"
       trigger={
         <>
           <Upload className="w-4 h-4" /> Upload
@@ -107,7 +107,7 @@ async function ChurnedView() {
 
   return (
     <div className="space-y-8">
-      <h2 className="font-display text-2xl tracking-wide text-ink">Churned clients&apos; documents</h2>
+      <h2 className="text-[17px] font-bold text-ink">Churned clients&apos; documents</h2>
 
       {groups.length === 0 ? (
         <div className="bg-white border border-dashed border-black/15 rounded-2xl p-14 text-center">
@@ -121,7 +121,7 @@ async function ChurnedView() {
           <section key={g.id} className="space-y-3">
             <div className="flex items-center gap-2">
               <Link href={`/crm/${g.id}`} className="group/client">
-                <h3 className="font-display text-2xl tracking-wide text-ink group-hover/client:text-brand transition-colors">
+                <h3 className="text-[17px] font-bold text-ink group-hover/client:text-brand transition-colors">
                   {g.name}
                 </h3>
               </Link>

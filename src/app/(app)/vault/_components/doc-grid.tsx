@@ -40,7 +40,7 @@ export default function DocGrid({ docs }: { docs: Doc[] }) {
         {docs.map((d) => (
           <div
             key={d.id}
-            className="relative group bg-white rounded-2xl border border-black/[0.07] overflow-hidden hover:border-brand/40 transition-colors"
+            className="relative group bg-white rounded-[22px] border border-black/[0.07] overflow-hidden hover:border-brand/40 transition-colors"
           >
             <button
               onClick={() => setPreview(d)}
@@ -139,7 +139,7 @@ function PreviewModal({ doc, onClose }: { doc: Doc; onClose: () => void }) {
           <div className="flex items-center gap-2 shrink-0">
             <a
               href={`/api/files/${doc.id}`}
-              className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink/60 hover:text-brand"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[#4F4943] hover:text-[#B34100]"
             >
               <Download className="w-4 h-4" /> Download
             </a>

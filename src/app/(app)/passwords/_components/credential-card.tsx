@@ -96,7 +96,7 @@ export default function CredentialCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-black/[0.07] p-5 flex flex-col gap-3">
+    <div className="bg-white rounded-[22px] border border-black/[0.07] p-5 flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

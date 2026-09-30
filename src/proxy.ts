@@ -28,9 +28,10 @@ export default async function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Run on all routes except API, Next internals, and static assets.
+// Run on all routes except API, Next internals, static assets, and the PWA
+// files (the manifest and service worker must load without a session).
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

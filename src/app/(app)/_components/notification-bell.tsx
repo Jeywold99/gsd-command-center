@@ -135,14 +135,14 @@ export default function NotificationBell({
       <button
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 rounded-full text-ink/60 hover:text-ink hover:bg-black/[0.04] transition"
-        aria-label="Notifications"
+        className="relative w-11 h-11 inline-flex items-center justify-center rounded-[15px] border border-black/[0.08] bg-white text-ink hover:border-brand/40 transition"
+        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
         aria-haspopup="true"
         aria-expanded={open}
       >
         <Bell className="w-5 h-5" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-brand text-white text-[10px] font-bold leading-4 text-center">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-brand text-ink text-[10px] font-bold leading-[18px] text-center border-2 border-cream">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -157,11 +157,11 @@ export default function NotificationBell({
           // viewport-fixed instead — same idea as the "fixed" toast below,
           // which never had this problem because it's anchored to a page
           // corner, not a button.
-          className="fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 w-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-black/[0.08] z-50 overflow-hidden"
+          className="fixed inset-x-4 top-[calc(env(safe-area-inset-top)+4.5rem)] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 w-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-xl border border-black/[0.08] z-50 overflow-hidden"
           role="menu"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.06]">
-            <p className="font-display text-lg tracking-wide text-ink">
+            <p className="text-[17px] font-bold text-ink">
               Notifications
             </p>
             {unread > 0 && (

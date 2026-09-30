@@ -47,11 +47,11 @@ export default function ConfirmDelete({
           aria-modal="true"
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6"
+            className="w-full max-w-sm rounded-[24px] bg-white shadow-2xl p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 mb-2">
-              <h3 className="font-display text-xl tracking-wide text-ink">{title}</h3>
+              <h3 className="text-[17px] font-bold text-ink">{title}</h3>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -69,7 +69,7 @@ export default function ConfirmDelete({
                 ))}
                 <button
                   type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-bold uppercase tracking-wide py-2.5 rounded-full transition-colors"
+                  className="w-full h-11 bg-[#B42318] hover:bg-[#912018] text-white text-sm font-bold rounded-[14px] transition-colors"
                 >
                   Delete
                 </button>

@@ -113,19 +113,19 @@ export default function GlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="hidden sm:inline-flex items-center gap-2 rounded-full border border-black/10 hover:border-brand/40 hover:bg-brand-pale text-ink/50 hover:text-brand px-3 py-1.5 text-sm transition-colors"
+        className="hidden lg:inline-flex w-[420px] h-11 items-center gap-2.5 rounded-[14px] border border-black/[0.08] bg-white hover:border-brand/40 text-ink/55 px-3.5 text-sm transition-colors"
         aria-label="Search"
       >
-        <Search className="w-4 h-4" />
-        <span className="text-xs">Search…</span>
-        <kbd className="text-[10px] font-bold text-ink/30 border border-black/10 rounded px-1">
-          ⌘K
+        <Search className="w-[18px] h-[18px]" />
+        <span className="flex-1 text-left">Search tasks, clients, notes…</span>
+        <kbd className="font-body text-[11px] font-semibold text-ink/55 bg-cream rounded-md px-1.5 py-0.5">
+          Ctrl K
         </kbd>
       </button>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="sm:hidden p-2 rounded-full text-ink/60 hover:text-ink hover:bg-black/[0.04] transition"
+        className="lg:hidden w-11 h-11 inline-flex items-center justify-center rounded-[15px] border border-black/[0.08] bg-white text-ink hover:border-brand/40 transition"
         aria-label="Search"
       >
         <Search className="w-5 h-5" />

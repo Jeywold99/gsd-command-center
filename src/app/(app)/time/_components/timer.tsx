@@ -58,7 +58,7 @@ export default function Timer({
           <form action={stopTimer}>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide px-5 py-2.5 rounded-full transition-colors"
+              className="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-ink font-bold px-5 py-2.5 rounded-[14px] transition-colors"
             >
               <Square className="w-4 h-4" />
               Stop
@@ -72,17 +72,17 @@ export default function Timer({
   return (
     <form
       action={startTimer}
-      className="bg-white rounded-2xl border border-black/[0.07] p-5 flex flex-wrap items-end gap-3"
+      className="bg-white rounded-[22px] border border-black/[0.07] p-5 flex flex-wrap items-end gap-3"
     >
       <div className="w-56">
-        <label className="block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5">
+        <label className="block text-xs font-semibold text-[#6B645D] mb-1.5">
           Project
         </label>
         <select
           name="projectId"
           required
           defaultValue=""
-          className="w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+          className="w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
         >
           <option value="" disabled>
             Select project…
@@ -96,18 +96,18 @@ export default function Timer({
         </select>
       </div>
       <div className="flex-1 min-w-[180px]">
-        <label className="block text-xs font-bold text-ink/60 uppercase tracking-wide mb-1.5">
+        <label className="block text-xs font-semibold text-[#6B645D] mb-1.5">
           Note
         </label>
         <input
           name="note"
           placeholder="What are you working on?"
-          className="w-full bg-white border border-black/10 rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+          className="w-full bg-white border border-black/10 rounded-[12px] px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
         />
       </div>
       <button
         type="submit"
-        className="inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-bold uppercase tracking-wide px-5 py-2.5 rounded-full transition-colors shadow-sm"
+        className="min-h-11 inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-ink font-bold px-5 py-2.5 rounded-[14px] transition-colors"
       >
         <Play className="w-4 h-4" />
         Start Timer

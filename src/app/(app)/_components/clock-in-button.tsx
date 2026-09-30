@@ -48,15 +48,16 @@ export default function ClockInButton({
         type="button"
         onClick={toggle}
         disabled={isPending}
-        className="inline-flex items-center gap-2 rounded-full bg-brand/10 hover:bg-brand/15 text-brand font-bold pl-2.5 pr-3 py-1.5 text-sm transition-colors disabled:opacity-60"
+        className="inline-flex h-11 items-center gap-3 rounded-[14px] bg-midnight text-white pl-3.5 pr-1.5 transition-opacity disabled:opacity-60"
         title="Clock out"
       >
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand text-white">
-          <Square className="w-3 h-3" />
+        <span className="w-2 h-2 rounded-full bg-success" aria-hidden />
+        <span className="font-display text-[22px] leading-none tracking-wider tabular-nums">
+          {clock(elapsed)}
         </span>
-        <span className="tabular-nums">{clock(elapsed)}</span>
-        <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wide">
-          Clock out
+        <span className="inline-flex h-8 items-center gap-1.5 rounded-[10px] bg-brand px-3 text-[13px] font-bold text-ink">
+          <Square className="w-3 h-3 fill-current" />
+          Stop
         </span>
       </button>
     );
@@ -67,13 +68,11 @@ export default function ClockInButton({
       type="button"
       onClick={toggle}
       disabled={isPending}
-      className="inline-flex items-center gap-2 rounded-full border border-black/10 hover:border-brand/40 hover:bg-brand-pale text-ink/70 hover:text-brand font-bold px-3 py-1.5 text-sm transition-colors disabled:opacity-60"
+      className="inline-flex h-11 items-center gap-2 rounded-[14px] border border-black/[0.08] bg-white hover:border-brand/40 text-ink font-semibold px-4 text-sm transition-colors disabled:opacity-60"
       title="Clock in"
     >
-      <Play className="w-4 h-4" />
-      <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-wide">
-        Clock in
-      </span>
+      <Play className="w-4 h-4 text-brand fill-current" />
+      Clock in
     </button>
   );
 }

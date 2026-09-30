@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { X, CheckSquare, ChevronRight } from "lucide-react";
 import { COLUMNS, PRIORITY, initials, fmtDate, groupByClient } from "../../projects/_components/task-badges";
 import { bulkUpdateTasks } from "../../projects/actions";
+import { taskPath } from "@/lib/task-path";
 
 type Row = {
   id: string;
@@ -141,7 +142,7 @@ export default function TaskTable({
   }
 
   function renderRow(t: Row) {
-    const href = t.project ? `/projects/${t.project.id}/tasks/${t.id}?from=tasks` : null;
+    const href = taskPath(t.id, t.project?.id, "tasks");
     const p = PRIORITY[t.priority] ?? PRIORITY.MEDIUM;
     const isSel = selected.has(t.id);
     return (
@@ -345,7 +346,7 @@ export default function TaskTable({
               type="button"
               onClick={apply}
               disabled={!hasChange || isPending}
-              className="bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold uppercase tracking-wide px-8 py-2 rounded-full transition-colors"
+              className="min-h-11 bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed text-ink text-sm font-bold px-8 py-2 rounded-[14px] transition-colors"
             >
               {isPending ? "Applying…" : "Apply"}
             </button>
@@ -354,7 +355,7 @@ export default function TaskTable({
       )}
 
       {/* ── Table ── */}
-      <div className="bg-white rounded-2xl border border-black/[0.07] overflow-hidden">
+      <div className="bg-white rounded-[22px] border border-black/[0.07] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
