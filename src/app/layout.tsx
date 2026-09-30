@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   icons: {
-    apple: [{ url: "/icons/apple-touch-icon-180.png", sizes: "180x180" }],
+    apple: [{ url: "/icons/apple-touch-icon-180.png?v=2", sizes: "180x180" }],
   },
   formatDetection: { telephone: false },
 };
