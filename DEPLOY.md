@@ -223,3 +223,18 @@ docker compose down               # stop (volumes/data preserved)
 - **n8n** — you self-host separately; point its Gmail workflows at
   `https://gsd.yourdomain.com/api/emails*` with an inbound API key (see
   `n8n/README.md`).
+- **Voice notes** — the Voice Note Pipeline posts transcriptions to
+  `https://gsd.yourdomain.com/api/voice-notes/ingest` (setup: `n8n/README.md`,
+  "Voice Notes"). Each person generates their own voice key under **Profile**.
+- **Installable app + push** — the site is a PWA (manifest, icons, service
+  worker are built in). For push notifications, generate VAPID keys once and put
+  them in `.env`, then `docker compose up -d`:
+  ```bash
+  docker compose exec web npx web-push generate-vapid-keys
+  # → VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY in .env, plus VAPID_SUBJECT=mailto:you@…
+  ```
+  Keep the keys stable — changing them silently breaks every existing device
+  subscription (people just toggle notifications off/on in Profile to re-subscribe).
+  On iPhone, push only works from the Home Screen app (Share → Add to Home Screen).
+- **Time zone** — `APP_TIMEZONE` (default `Asia/Manila`) decides what "today"
+  means for Home's *Due today* / *Up next*.

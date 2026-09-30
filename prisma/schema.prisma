@@ -49,7 +49,7 @@ enum ClientHealth {
 
 enum BillingType {
   HOURLY // per-hour rate
-  FIXED  // retainer: track required hours/week
+  FIXED // retainer: track required hours/week
 }
 
 // How often a client pays us — drives the income calculator's period totals.
@@ -108,6 +108,7 @@ enum ChannelScope {
 enum EventType {
   MEETING
   CONTENT_PUBLISH
+  REMINDER
   OTHER
 }
 
@@ -130,6 +131,7 @@ enum NotificationType {
   CHANNEL_MESSAGE
   PROJECT_CREATED
   EVENT_CREATED
+  VOICE_NOTE
   SYSTEM
 }
 
@@ -189,6 +191,10 @@ model User {
   emailsAuthored    EmailMessage[]     @relation("EmailAuthor")
   billingRatesSet   BillingRate[]
   credentialsAdded  Credential[]       @relation("CredentialAuthor")
+  voiceNotes        VoiceNote[]
+  ideas             Idea[]
+  voiceKey          VoiceKey?
+  pushSubscriptions PushSubscription[]
 
   @@index([role])
 }
@@ -346,46 +352,51 @@ model Milestone {
 }
 
 model Task {
-  id          String     @id @default(uuid())
-  title       String
-  description String?
+  id                 String               @id @default(uuid())
+  title              String
+  description        String?
   // Notion-style rich "Notes" (BlockNote blocks), separate from the plain description.
-  content     Json?
-  status      TaskStatus @default(TODO)
-  priority    Priority   @default(MEDIUM)
+  content            Json?
+  status             TaskStatus           @default(TODO)
+  priority           Priority             @default(MEDIUM)
   // Null projectId = "inbox" (e.g. a task piped in from n8n before triage).
-  projectId   String?
-  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  milestoneId String?
-  milestone   Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  projectId          String?
+  project            Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  milestoneId        String?
+  milestone          Milestone?           @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   // Self-relation for subtasks.
-  parentId    String?
-  parent      Task?      @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subtasks    Task[]     @relation("Subtasks")
-  startDate   DateTime?
-  dueDate     DateTime?
+  parentId           String?
+  parent             Task?                @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks           Task[]               @relation("Subtasks")
+  startDate          DateTime?
+  dueDate            DateTime?
   // Ordering within a Kanban column.
-  position    Int        @default(0)
+  position           Int                  @default(0)
   // Archived tasks are hidden from the active task views (restorable).
-  isArchived  Boolean    @default(false)
-  completedAt DateTime?
+  isArchived         Boolean              @default(false)
+  completedAt        DateTime?
   // When set, completing this task spins up its next occurrence (see
   // lib/recurrence.ts) instead of just sitting done. Interval defaults to 1
   // (every day/week/month) when null.
   recurrence         RecurrenceFrequency?
   recurrenceInterval Int?
-  createdById String?
-  createdBy   User?      @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdById        String?
+  createdBy          User?                @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  // Set when the task was auto-created from a voice-note transcription.
+  voiceNoteId        String?
+  voiceNote          VoiceNote?           @relation(fields: [voiceNoteId], references: [id], onDelete: SetNull)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   assignees      TaskAssignee[]
   reminders      Reminder[]
   timeEntries    TimeEntry[]
   calendarEvents CalendarEvent[]
   documents      Document[]
+  ideasConverted Idea[]          @relation("IdeaTask")
 
   @@index([projectId])
+  @@index([voiceNoteId])
   @@index([milestoneId])
   @@index([parentId])
   @@index([status])
@@ -449,30 +460,34 @@ model Message {
 // Task due dates are overlaid by querying Task.dueDate — not duplicated here.
 
 model CalendarEvent {
-  id          String    @id @default(uuid())
+  id          String     @id @default(uuid())
   title       String
   description String?
-  type        EventType @default(MEETING)
+  type        EventType  @default(MEETING)
   startAt     DateTime
   endAt       DateTime?
-  allDay      Boolean   @default(false)
+  allDay      Boolean    @default(false)
   location    String?
   meetingUrl  String?
   clientId    String?
-  client      Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  client      Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
   projectId   String?
-  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
   taskId      String?
-  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  task        Task?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  // Set when the event was auto-created from a voice-note reminder.
+  voiceNoteId String?
+  voiceNote   VoiceNote? @relation(fields: [voiceNoteId], references: [id], onDelete: SetNull)
   createdById String
-  createdBy   User      @relation("EventCreatedBy", fields: [createdById], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdBy   User       @relation("EventCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   attendees CalendarAttendee[]
 
   @@index([startAt])
   @@index([clientId])
+  @@index([voiceNoteId])
 }
 
 model CalendarAttendee {
@@ -693,4 +708,84 @@ model Credential {
   @@index([scope])
   @@index([clientId])
   @@index([category])
+}
+
+// ── Voice notes (iPhone Shortcut → n8n → command center) ─────────────────────
+// n8n transcribes + extracts each recording and POSTs the result to
+// /api/voice-notes/ingest. The audio itself never reaches the command center —
+// only the transcription and what was extracted from it. Each note is private
+// to the user whose personal voice key came with it.
+
+model VoiceNote {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Where the recording came from: "shortcut" today; free-form for future sources.
+  source     String   @default("shortcut")
+  summary    String   @default("")
+  transcript String   @default("")
+  notes      String   @default("")
+  // The raw extraction exactly as n8n sent it — kept as history even after the
+  // tasks / events / ideas it produced are edited or deleted.
+  tasks      Json     @default("[]")
+  ideas      Json     @default("[]")
+  reminders  Json     @default("[]")
+  // Optional caller-supplied id (e.g. n8n execution id) so a retried POST
+  // doesn't create everything twice.
+  externalId String?  @unique
+  isRead     Boolean  @default(false)
+  receivedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  createdTasks  Task[]
+  createdEvents CalendarEvent[]
+  createdIdeas  Idea[]
+
+  @@index([userId, receivedAt])
+}
+
+// Personal ideas list. Voice notes add to it automatically; users can also add
+// ideas by hand and turn any idea into a task.
+model Idea {
+  id          String     @id @default(uuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text        String
+  isStarred   Boolean    @default(false)
+  voiceNoteId String?
+  voiceNote   VoiceNote? @relation(fields: [voiceNoteId], references: [id], onDelete: SetNull)
+  // The task this idea was turned into, if any.
+  taskId      String?
+  task        Task?      @relation("IdeaTask", fields: [taskId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+// One personal key per user. The iPhone Shortcut sends it (via n8n) so the
+// command center knows whose transcription it is. Looked up by hash; also kept
+// encrypted so the owner can reveal/copy it again from Settings.
+model VoiceKey {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hashedKey    String    @unique
+  encryptedKey String
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+// A browser/device Web Push subscription (installed PWA). One row per device.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

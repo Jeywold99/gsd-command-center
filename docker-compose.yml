@@ -37,6 +37,10 @@ services:
       GSD_ALLOWED_ORIGIN: ${GSD_ALLOWED_ORIGIN}
       GSD_INBOX_ADDRESS: ${GSD_INBOX_ADDRESS}
       STORAGE_DIR: /app/storage/uploads
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Manila}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     volumes:
       - uploads:/app/storage/uploads
     command: sh -c "npx prisma migrate deploy && npm run start"
@@ -68,6 +72,9 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     command: npm run reminders
 
   # ── Cloudflare Tunnel (public HTTPS, no open ports) ──

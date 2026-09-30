@@ -79,3 +79,66 @@ returns 404, never a double status change).
 Both endpoints were verified directly against a live GSD before these workflows
 were written, so if a run fails it's almost always the Gmail credential,
 `GSD_BASE_URL` reachability from the n8n host, or the API key.
+
+---
+
+# Voice Notes — n8n → Command Center
+
+Your existing **Voice Note Pipeline** (iPhone Shortcut → Groq Whisper → Groq
+extract → Parse Note) gets one extra branch that sends the finished
+transcription to the Command Center. No audio is sent — only the text and what
+was extracted from it.
+
+```
+Shortcut (audio + voice_key) ──▶ Webhook ─▶ Transcribe ─▶ Extract ─▶ Parse Note ─┬─▶ Respond to Webhook
+                                                                                  ├─▶ Google Calendar (unchanged)
+                                                                                  └─▶ Log to Command Center ─▶ POST /api/voice-notes/ingest
+```
+
+The Command Center then, for the person whose voice key came with the recording:
+- stores the transcription (private to them) in **Voice notes**,
+- creates each **task** in their task inbox (assigned to them),
+- turns each **timed reminder** into a task + a reminder notification + an
+  event on their Command Center calendar (reminders without a time become plain tasks),
+- adds each **idea** to their **Ideas** list,
+- notifies them in the app.
+
+## One-time setup
+
+1. **Voice key (per person).** In the Command Center open **Profile → Voice key**,
+   generate/copy your key. In the iPhone Shortcut, open **Get Contents of URL →
+   Request Body (Form)** and add a **Text** field named `voice_key` with the key
+   as its value. Each person uses their own key; that is what keeps
+   transcriptions private.
+
+2. **Add the node.** Open `voice-note-to-command-center.json`, copy its whole
+   contents, and paste onto the Voice Note Pipeline canvas (Ctrl/Cmd+V). Drag a
+   connection from **Parse Note** to **Log to Command Center** (a new parallel
+   branch — leave Respond to Webhook connected directly to Parse Note).
+   If your webhook node isn't named exactly `Webhook`, update the `x-voice-key`
+   header expression to match.
+
+3. **Variables** (same two the shared-inbox workflows use — skip if already set):
+   - `GSD_BASE_URL` — where the Command Center is reachable from n8n.
+   - `GSD_API_KEY` — an inbound key from **Settings → Inbound API Keys**.
+
+4. **Remove Notion** once you've confirmed notes arrive: delete the Split
+   Tasks / Has Due? / Notion: Task and Split Ideas / Notion: Idea branches.
+   Keep Google Calendar if you still want reminders there too.
+
+## Payload
+
+The node forwards Parse Note's output plus three fields:
+
+```json
+{ "summary": "…", "transcript": "…", "notes": "",
+  "tasks": [{ "title": "…", "due": "2026-10-02", "priority": "high" }],
+  "ideas": [{ "idea": "…" }],
+  "reminders": [{ "text": "…", "datetime": "2026-10-01T15:00:00+08:00" }],
+  "source": "shortcut", "received_at": "<ISO>", "external_id": "<n8n execution id>" }
+```
+
+Headers: `x-api-key` (n8n inbound key) and `x-voice-key` (the recorder's voice
+key). `external_id` makes a retried execution safe — the same note is never
+created twice. Responses: `201 { id, tasks, reminders, ideas }`, `200` for a
+duplicate, `401` for a bad/missing key, `400` for an empty note.

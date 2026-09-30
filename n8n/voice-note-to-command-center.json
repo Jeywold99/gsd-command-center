@@ -1,0 +1,28 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.GSD_BASE_URL }}/api/voice-notes/ingest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.GSD_API_KEY }}" },
+            { "name": "x-voice-key", "value": "={{ $('Webhook').first().json.body.voice_key || '' }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ...$json, source: $json.source || 'shortcut', received_at: $json.received_at || new Date().toISOString(), external_id: String($execution.id) }) }}",
+        "options": { "timeout": 20000 }
+      },
+      "id": "c2b2f001-0000-4000-8000-000000000001",
+      "name": "Log to Command Center",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 700],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {}
+}

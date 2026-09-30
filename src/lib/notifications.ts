@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "./prisma";
 import { emitNotifications } from "./realtime";
+import { sendPush } from "./push";
 import type { NotificationType } from "@/generated/prisma/client/enums";
 
 // In-app notification center. Other features call `notify()` to drop a row;
@@ -42,6 +43,7 @@ export async function notify(input: NotifyInput) {
       createdAt: row.createdAt,
     },
   ]);
+  await sendPush([row.userId], { title: row.title, body: row.body, url: row.linkUrl });
   return row;
 }
 
@@ -81,6 +83,7 @@ export async function notifyMany(
         createdAt: row.createdAt,
       })),
     );
+    await sendPush(userIds, { title: input.title, body: input.body, url: input.linkUrl });
   } catch (err) {
     console.error("notifyMany failed:", err);
   }

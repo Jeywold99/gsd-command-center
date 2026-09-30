@@ -29,6 +29,9 @@ export async function listTaskDates(from: Date, to: Date, userId?: string) {
       parentId: null,
       isArchived: false,
       OR: [{ startDate: { gte: from, lt: to } }, { dueDate: { gte: from, lt: to } }],
+      // A voice-note reminder already shows as its REMINDER event — don't
+      // overlay its backing task a second time.
+      calendarEvents: { none: { type: "REMINDER" } },
       ...(userId ? { assignees: { some: { userId } } } : {}),
     },
     orderBy: { dueDate: "asc" },
