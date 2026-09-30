@@ -118,9 +118,11 @@ The Command Center then, for the person whose voice key came with the recording:
    If your webhook node isn't named exactly `Webhook`, update the `x-voice-key`
    header expression to match.
 
-3. **Variables** (same two the shared-inbox workflows use — skip if already set):
-   - `GSD_BASE_URL` — where the Command Center is reachable from n8n.
-   - `GSD_API_KEY` — an inbound key from **Settings → Inbound API Keys**.
+3. **Credential.** This node doesn't read `$env` (many n8n installs block env
+   access in nodes — "access to env vars denied"). In the node pick
+   **Credential for Header Auth → Create new**: Name `x-api-key`, Value an
+   inbound key from **Settings → Inbound API Keys** (`gsd_…`). If your Command
+   Center isn't at `https://gsd.getshtdonehq.com`, edit the node's URL.
 
 4. **Remove Notion** once you've confirmed notes arrive: delete the Split
    Tasks / Has Due? / Notion: Task and Split Ideas / Notion: Idea branches.
