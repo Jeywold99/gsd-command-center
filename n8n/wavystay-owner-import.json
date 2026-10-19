@@ -1,0 +1,551 @@
+{
+  "name": "WavyStay — Owner/Co-Host CSV Import to GHL",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WavyStay Owner/Co-Host Import — Setup\n\n**Before running:**\n1. Run the CSV cleanup pass first (split Tier → Tier Rank + Data Quality Flag, swap City/State, drop `Listing URL.1`). This workflow assumes an already-cleaned CSV — it does not do that cleanup itself.\n2. Create an n8n credential: **Header Auth**, header name `Authorization`, value `Bearer <your GHL Private Integration Token>`. Attach it to every HTTP Request node below (placeholder credential id `REPLACE_WITH_GHL_CREDENTIAL`).\n3. Open the **Normalize Row** node and edit the `cfg` object at the top of its code — that's the single place all workflow-specific IDs live, no separate node or host env vars needed:\n   - `locationId` and `pipelineId` are already filled in (WavyStay's \"WS-Owner Lifecycle\" pipeline).\n   - `stageColdLeadId` is blank — find the \"Cold Lead\" stage id (GHL doesn't expose it in the UI; use the Network tab on the pipeline's Stages page, or `GET /opportunities/pipelines?locationId=...`) and paste it in. Until then, new opportunities land in the pipeline's default stage instead of \"Cold Lead\" specifically — `Create Opportunity` only sends `pipelineStageId` when this is filled in, so a blank value doesn't error, it just skips the field.\n   - The 10 `cf*` fields (Contact: Business Unit, Referral Source, Phone 2/3, Email 2; Opportunity: Tier Rank, Close Score, Current Manager, Pitch Angle, Listing URL) are also blank — each is skipped when empty, but fill in the 5 Opportunity ones for real: they're the entire reason this workflow exists instead of GHL's native importer.\n\n**Running it:** open the \"Upload CSV\" node and use the Test step URL it shows to open the upload form in your browser, then pick the cleaned CSV file there — nothing needs to exist on the n8n host's filesystem. Activate the workflow (top-right toggle) once to get a stable production form URL for repeat runs.\n\n**Why it's built this way:**\n- Tier, Close Score, Current Manager, Pitch Angle and Listing URL live on the **Opportunity**, never the Contact — so an owner's 2nd/3rd listing never overwrites another listing's prioritization data on a shared Contact.\n- \"Create Opportunity\" sets customFields in the *same* POST (GHL's v2 API accepts customFields on create), so there's no separate update call that can fail independently and leave an opportunity with blank fields.\n- Contact lookup checks phone AND email (`/contacts/search/duplicate`) before creating anything — an owner's repeat listing reuses the existing Contact ID instead of creating a duplicate contact.\n- Every row ends at exactly one of 6 terminal nodes (2 success, 4 failure) so a bad row is visible after a run instead of silently vanishing or halting the whole batch.\n- A row with neither Phone 1 nor Email 1 is flagged immediately (\"Row Failed - Missing Contact Info\") before any API call — GHL's search endpoint requires at least one identifier and would otherwise reject it with a 400.\n- All 4 GHL HTTP calls retry up to 3x (1s apart) before giving up, so a one-off network blip (e.g. a connection timeout) doesn't permanently fail a row that would have succeeded on a second try.\n- All 4 GHL HTTP calls use n8n's built-in Batching option (1 item per batch, 1000ms between batches) so rows are sent to GHL one at a time with a real gap between them, avoiding 429 rate-limit errors on larger CSVs. (An earlier version used a Wait node for this, but a Wait node only pauses once for the whole set of items, not per row — Batching is the correct mechanism and is what GHL's own 429 error message points you toward.)\n- CSV headers assumed by \"Normalize Row\": Owner Name, Phone 1-3, Email 1-2, City, State, Referral Source, Listing Title, Listing URL, Tier Rank, Data Quality Flag, Close Score, Current Manager, Pitch Angle. Edit that node's `get('...')` keys if your cleaned CSV uses different header text.",
+        "height": 700,
+        "width": 460
+      },
+      "id": "ws-oi-00",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -420]
+    },
+    {
+      "parameters": {
+        "formTitle": "WavyStay Owner Import — Upload CSV",
+        "formDescription": "Upload the cleaned owner/co-host CSV. Expected headers: Owner Name, Phone 1-3, Email 1-2, City, State, Referral Source, Listing Title, Listing URL, Tier Rank, Data Quality Flag, Close Score, Current Manager, Pitch Angle.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Cleaned CSV",
+              "fieldType": "file",
+              "requiredField": true,
+              "acceptFileTypes": ".csv",
+              "multipleFiles": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-01",
+      "name": "Upload CSV",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [0, 400],
+      "webhookId": "ws-owner-import-upload"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// The Form Trigger's uploaded file arrives under a binary key derived from\n// the field label (e.g. \"Cleaned_CSV\"), not a fixed name. Normalize it to\n// \"data\" so \"Parse CSV\" can reference a predictable binary property.\nconst items = $input.all();\nfor (const item of items) {\n  const keys = Object.keys(item.binary || {});\n  if (keys.length && !item.binary.data) {\n    item.binary.data = item.binary[keys[0]];\n  }\n}\nreturn items;"
+      },
+      "id": "ws-oi-02",
+      "name": "Prepare Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 400]
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "options": {}
+      },
+      "id": "ws-oi-03",
+      "name": "Parse CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Normalize each cleaned-CSV row into the shapes the GHL API calls need.\n// Column names below must match the cleaned CSV's headers exactly (case-sensitive).\n// Edit the keys inside get('...') if your headers differ.\n//\n// Workflow-level constants — edit the values below directly.\n// Leave a custom field id blank ('') if you don't have that field in GHL yet;\n// it's skipped rather than sent as an invalid id. stageColdLeadId blank means\n// GHL will drop the new opportunity into the pipeline's default stage instead\n// of \"Cold Lead\" specifically — fill it in once you find it and future rows\n// will land in the right stage (already-created ones can be moved manually).\nconst cfg = {\n  locationId: 'ePctRAWdzLzdap3o1H4S',\n  pipelineId: 'vFY6pqeYysx9GMHwyr8j',\n  stageColdLeadId: '',\n  cfContactBusinessUnit: '',\n  cfContactReferralSource: '',\n  cfContactPhone2: '',\n  cfContactPhone3: '',\n  cfContactEmail2: '',\n  cfOppTierRank: '',\n  cfOppCloseScore: '',\n  cfOppCurrentManager: '',\n  cfOppPitchAngle: '',\n  cfOppListingUrl: '',\n};\nconst has = (v) => Boolean(v);\nconst locationId = cfg.locationId;\nconst items = $input.all();\nconst out = [];\n\nfor (const item of items) {\n  const r = item.json;\n  const get = (k) => (r[k] === undefined || r[k] === null) ? '' : String(r[k]).trim();\n\n  const name = get('Owner Name');\n  const phone1 = get('Phone 1');\n  const phone2 = get('Phone 2');\n  const phone3 = get('Phone 3');\n  const email1 = get('Email 1');\n  const email2 = get('Email 2');\n  const city = get('City');\n  const state = get('State');\n  const referralSource = get('Referral Source');\n  const listingTitle = get('Listing Title');\n  const listingUrl = get('Listing URL');\n  const tierRank = get('Tier Rank');\n  const dataQualityFlag = get('Data Quality Flag');\n  const closeScore = get('Close Score');\n  const currentManager = get('Current Manager');\n  const pitchAngle = get('Pitch Angle');\n\n  const dnd = dataQualityFlag.toLowerCase() === 'do not contact';\n\n  // Contact-level duplicate check: match on phone and/or email, whichever exist.\n  const searchQuery = { locationId };\n  if (email1) searchQuery.email = email1;\n  if (phone1) searchQuery.number = phone1;\n\n  // GHL's core Contact object only has ONE native phone + ONE native email.\n  // Phone 2/3 and Email 2 go out as Contact custom fields instead.\n  const contactCustomFields = [];\n  if (has(cfg.cfContactBusinessUnit)) {\n    contactCustomFields.push({ id: cfg.cfContactBusinessUnit, fieldValue: 'WavyStay' });\n  }\n  if (referralSource && has(cfg.cfContactReferralSource)) {\n    contactCustomFields.push({ id: cfg.cfContactReferralSource, fieldValue: referralSource });\n  }\n  if (phone2 && has(cfg.cfContactPhone2)) {\n    contactCustomFields.push({ id: cfg.cfContactPhone2, fieldValue: phone2 });\n  }\n  if (phone3 && has(cfg.cfContactPhone3)) {\n    contactCustomFields.push({ id: cfg.cfContactPhone3, fieldValue: phone3 });\n  }\n  if (email2 && has(cfg.cfContactEmail2)) {\n    contactCustomFields.push({ id: cfg.cfContactEmail2, fieldValue: email2 });\n  }\n\n  const createContactBody = {\n    locationId,\n    name: name || undefined,\n    phone: phone1 || undefined,\n    email: email1 || undefined,\n    city: city || undefined,\n    state: state || undefined,\n    source: 'WavyStay Owner Import',\n    tags: ['WS-Lead-Cold', 'WS-Import-CoHost-Priority-Sep2026'],\n    customFields: contactCustomFields,\n  };\n\n  // Opportunity-level fields — this is the data the native GHL importer can't touch.\n  const opportunityCustomFields = [];\n  if (has(cfg.cfOppTierRank)) opportunityCustomFields.push({ id: cfg.cfOppTierRank, fieldValue: tierRank });\n  if (has(cfg.cfOppCloseScore)) opportunityCustomFields.push({ id: cfg.cfOppCloseScore, fieldValue: closeScore });\n  if (has(cfg.cfOppCurrentManager)) opportunityCustomFields.push({ id: cfg.cfOppCurrentManager, fieldValue: currentManager });\n  if (has(cfg.cfOppPitchAngle)) opportunityCustomFields.push({ id: cfg.cfOppPitchAngle, fieldValue: pitchAngle });\n  if (has(cfg.cfOppListingUrl)) opportunityCustomFields.push({ id: cfg.cfOppListingUrl, fieldValue: listingUrl });\n\n  out.push({\n    json: {\n      rowName: name || '(unnamed row)',\n      phone1, phone2, phone3, email1, email2,\n      city, state, referralSource,\n      listingTitle, listingUrl, tierRank, dataQualityFlag, closeScore, currentManager, pitchAngle,\n      dnd,\n      hasIdentifier: Boolean(phone1 || email1),\n      locationId,\n      pipelineId: cfg.pipelineId,\n      stageColdLeadId: cfg.stageColdLeadId,\n      searchQuery,\n      createContactBody,\n      opportunityCustomFields,\n    },\n  });\n}\n\nreturn out;"
+      },
+      "id": "ws-oi-04",
+      "name": "Normalize Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "c-has-id",
+              "leftValue": "={{ $json.hasIdentifier ? 'yes' : 'no' }}",
+              "rightValue": "yes",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ws-oi-24",
+      "name": "Has Phone or Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [770, 400]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "h1", "name": "rowName", "value": "={{ $json.rowName }}", "type": "string" },
+            { "id": "h2", "name": "status", "value": "failed", "type": "string" },
+            { "id": "h3", "name": "stage", "value": "missing_contact_info", "type": "string" },
+            { "id": "h4", "name": "errorDetail", "value": "Row has neither Phone 1 nor Email 1 - cannot search or create a GHL contact for it.", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-25",
+      "name": "Row Failed - Missing Contact Info",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 560]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://services.leadconnectorhq.com/contacts/search/duplicate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={{ JSON.stringify($json.searchQuery) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Version", "value": "v3" }]
+        },
+        "options": {
+          "batching": { "batch": { "batchSize": 1, "batchInterval": 1000 } }
+        }
+      },
+      "id": "ws-oi-06",
+      "name": "Search Contact (Duplicate Check)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 400],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": { "id": "REPLACE_WITH_GHL_CREDENTIAL", "name": "GHL Private Integration Token" }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Normalizes the duplicate-search response (or its caught error) into a\n// simple tri-state result so the IF nodes downstream don't need to know\n// GHL's response/error shape.\nconst res = $input.item.json;\nlet matchStatus = 'not_found';\nlet contactId = null;\nlet errorDetail = null;\n\nif (res && res.error) {\n  const raw = JSON.stringify(res.error);\n  const is404 = raw.indexOf('404') !== -1 || String(res.error.httpCode) === '404' || String(res.error.statusCode) === '404';\n  if (is404) {\n    matchStatus = 'not_found';\n  } else {\n    matchStatus = 'search_failed';\n    errorDetail = raw.slice(0, 500);\n  }\n} else if (res && res.contact && res.contact.id) {\n  matchStatus = 'found';\n  contactId = res.contact.id;\n}\n\nreturn { matchStatus, contactId, errorDetail };"
+      },
+      "id": "ws-oi-07",
+      "name": "Evaluate Match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "c-search-failed",
+              "leftValue": "={{ $json.matchStatus }}",
+              "rightValue": "search_failed",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ws-oi-08",
+      "name": "Search Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1540, 400]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "rowName", "value": "={{ $('Normalize Row').item.json.rowName }}", "type": "string" },
+            { "id": "a2", "name": "status", "value": "failed", "type": "string" },
+            { "id": "a3", "name": "stage", "value": "search_contact", "type": "string" },
+            { "id": "a4", "name": "errorDetail", "value": "={{ $json.errorDetail }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-09",
+      "name": "Row Failed - Contact Search",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1760, 620]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "c-found",
+              "leftValue": "={{ $json.matchStatus }}",
+              "rightValue": "found",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ws-oi-10",
+      "name": "Contact Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1760, 260]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "b1", "name": "contactId", "value": "={{ $json.contactId }}", "type": "string" },
+            { "id": "b2", "name": "isNewContact", "value": false, "type": "boolean" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-11",
+      "name": "Use Existing Contact",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1980, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Version", "value": "v3" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Normalize Row').item.json.createContactBody) }}",
+        "options": {
+          "batching": { "batch": { "batchSize": 1, "batchInterval": 1000 } }
+        }
+      },
+      "id": "ws-oi-12",
+      "name": "Create Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 460],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": { "id": "REPLACE_WITH_GHL_CREDENTIAL", "name": "GHL Private Integration Token" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "c-contact-ok",
+              "leftValue": "={{ $json.contact && $json.contact.id ? 'ok' : 'fail' }}",
+              "rightValue": "ok",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ws-oi-13",
+      "name": "Contact Created OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2200, 460]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "c1", "name": "contactId", "value": "={{ $json.contact.id }}", "type": "string" },
+            { "id": "c2", "name": "isNewContact", "value": true, "type": "boolean" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-14",
+      "name": "Use New Contact",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2420, 340]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "d1", "name": "rowName", "value": "={{ $('Normalize Row').item.json.rowName }}", "type": "string" },
+            { "id": "d2", "name": "status", "value": "failed", "type": "string" },
+            { "id": "d3", "name": "stage", "value": "create_contact", "type": "string" },
+            { "id": "d4", "name": "errorDetail", "value": "={{ JSON.stringify($json).slice(0, 500) }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-15",
+      "name": "Row Failed - Contact Create",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2420, 620]
+    },
+    {
+      "parameters": {},
+      "id": "ws-oi-16",
+      "name": "Contact Ready",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2640, 260]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/opportunities/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Version", "value": "v3" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pipelineId: $('Normalize Row').item.json.pipelineId, locationId: $('Normalize Row').item.json.locationId, name: $('Normalize Row').item.json.listingTitle, status: 'open', contactId: $json.contactId, ...($('Normalize Row').item.json.stageColdLeadId ? { pipelineStageId: $('Normalize Row').item.json.stageColdLeadId } : {}), customFields: $('Normalize Row').item.json.opportunityCustomFields }) }}",
+        "options": {
+          "batching": { "batch": { "batchSize": 1, "batchInterval": 1000 } }
+        }
+      },
+      "id": "ws-oi-17",
+      "name": "Create Opportunity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2860, 260],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": { "id": "REPLACE_WITH_GHL_CREDENTIAL", "name": "GHL Private Integration Token" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "c-opp-ok",
+              "leftValue": "={{ $json.opportunity && $json.opportunity.id ? 'ok' : 'fail' }}",
+              "rightValue": "ok",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ws-oi-18",
+      "name": "Opportunity Created OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3080, 260]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "e1", "name": "rowName", "value": "={{ $('Normalize Row').item.json.rowName }}", "type": "string" },
+            { "id": "e2", "name": "status", "value": "failed", "type": "string" },
+            { "id": "e3", "name": "stage", "value": "create_opportunity", "type": "string" },
+            { "id": "e4", "name": "contactId", "value": "={{ $('Contact Ready').item.json.contactId }}", "type": "string" },
+            { "id": "e5", "name": "errorDetail", "value": "={{ JSON.stringify($json).slice(0, 500) }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-19",
+      "name": "Row Failed - Opportunity Create",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3300, 520]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "c-dnd",
+              "leftValue": "={{ $('Normalize Row').item.json.dnd ? 'yes' : 'no' }}",
+              "rightValue": "yes",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ws-oi-20",
+      "name": "DND Flag Set?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3300, 120]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $('Contact Ready').item.json.contactId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Version", "value": "v3" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ dnd: true }) }}",
+        "options": {
+          "batching": { "batch": { "batchSize": 1, "batchInterval": 1000 } }
+        }
+      },
+      "id": "ws-oi-21",
+      "name": "Update Contact DND",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3520, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": { "id": "REPLACE_WITH_GHL_CREDENTIAL", "name": "GHL Private Integration Token" }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "f1", "name": "rowName", "value": "={{ $('Normalize Row').item.json.rowName }}", "type": "string" },
+            { "id": "f2", "name": "status", "value": "success", "type": "string" },
+            { "id": "f3", "name": "contactId", "value": "={{ $('Contact Ready').item.json.contactId }}", "type": "string" },
+            { "id": "f4", "name": "opportunityId", "value": "={{ $('Create Opportunity').item.json.opportunity.id }}", "type": "string" },
+            { "id": "f5", "name": "dndUpdated", "value": true, "type": "boolean" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-22",
+      "name": "Row Complete (With DND)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3740, 0]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            { "id": "g1", "name": "rowName", "value": "={{ $('Normalize Row').item.json.rowName }}", "type": "string" },
+            { "id": "g2", "name": "status", "value": "success", "type": "string" },
+            { "id": "g3", "name": "contactId", "value": "={{ $('Contact Ready').item.json.contactId }}", "type": "string" },
+            { "id": "g4", "name": "opportunityId", "value": "={{ $('Create Opportunity').item.json.opportunity.id }}", "type": "string" },
+            { "id": "g5", "name": "dndUpdated", "value": false, "type": "boolean" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ws-oi-23",
+      "name": "Row Complete (No DND)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [3520, 260]
+    }
+  ],
+  "connections": {
+    "Upload CSV": { "main": [[{ "node": "Prepare Upload", "type": "main", "index": 0 }]] },
+    "Prepare Upload": { "main": [[{ "node": "Parse CSV", "type": "main", "index": 0 }]] },
+    "Parse CSV": { "main": [[{ "node": "Normalize Row", "type": "main", "index": 0 }]] },
+    "Normalize Row": { "main": [[{ "node": "Has Phone or Email?", "type": "main", "index": 0 }]] },
+    "Has Phone or Email?": {
+      "main": [
+        [{ "node": "Search Contact (Duplicate Check)", "type": "main", "index": 0 }],
+        [{ "node": "Row Failed - Missing Contact Info", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Contact (Duplicate Check)": { "main": [[{ "node": "Evaluate Match", "type": "main", "index": 0 }]] },
+    "Evaluate Match": { "main": [[{ "node": "Search Failed?", "type": "main", "index": 0 }]] },
+    "Search Failed?": {
+      "main": [
+        [{ "node": "Row Failed - Contact Search", "type": "main", "index": 0 }],
+        [{ "node": "Contact Found?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Contact Found?": {
+      "main": [
+        [{ "node": "Use Existing Contact", "type": "main", "index": 0 }],
+        [{ "node": "Create Contact", "type": "main", "index": 0 }]
+      ]
+    },
+    "Use Existing Contact": { "main": [[{ "node": "Contact Ready", "type": "main", "index": 0 }]] },
+    "Create Contact": { "main": [[{ "node": "Contact Created OK?", "type": "main", "index": 0 }]] },
+    "Contact Created OK?": {
+      "main": [
+        [{ "node": "Use New Contact", "type": "main", "index": 0 }],
+        [{ "node": "Row Failed - Contact Create", "type": "main", "index": 0 }]
+      ]
+    },
+    "Use New Contact": { "main": [[{ "node": "Contact Ready", "type": "main", "index": 0 }]] },
+    "Contact Ready": { "main": [[{ "node": "Create Opportunity", "type": "main", "index": 0 }]] },
+    "Create Opportunity": { "main": [[{ "node": "Opportunity Created OK?", "type": "main", "index": 0 }]] },
+    "Opportunity Created OK?": {
+      "main": [
+        [{ "node": "DND Flag Set?", "type": "main", "index": 0 }],
+        [{ "node": "Row Failed - Opportunity Create", "type": "main", "index": 0 }]
+      ]
+    },
+    "DND Flag Set?": {
+      "main": [
+        [{ "node": "Update Contact DND", "type": "main", "index": 0 }],
+        [{ "node": "Row Complete (No DND)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update Contact DND": { "main": [[{ "node": "Row Complete (With DND)", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
