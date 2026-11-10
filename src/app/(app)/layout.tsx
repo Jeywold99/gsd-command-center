@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/dal";
+import { getPipelineAccess } from "@/lib/pipeline/access";
 import { listNotifications, countUnread } from "@/lib/notifications";
 import { getRunningEntry } from "@/lib/time";
 import { countUnreadVoiceNotes } from "@/lib/voice-notes";
@@ -27,6 +28,16 @@ export default async function AppLayout({
       ])
     : [[], 0, null, 0];
 
+  // The Pipeline (job tracker) is private to the two people listed in Supabase. This only decides whether
+  // the nav entry shows; the Pipeline routes and actions run their own check. Never lets a failure here
+  // break the rest of the app.
+  const canSeePipeline = user
+    ? await getPipelineAccess().then(
+        (a) => a.kind === "ok",
+        () => false,
+      )
+    : false;
+
   return (
     <AppShell
       user={{
@@ -38,6 +49,7 @@ export default async function AppLayout({
       notifications={notifications}
       unreadCount={unreadCount}
       voiceUnread={voiceUnread}
+      canSeePipeline={canSeePipeline}
       running={running ? { startedAt: running.startedAt } : null}
     >
       {children}

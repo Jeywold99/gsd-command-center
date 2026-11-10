@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Briefcase,
   Mic,
   Lightbulb,
   Building2,
@@ -15,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/dal";
+import { getPipelineAccess } from "@/lib/pipeline/access";
 import { countUnreadVoiceNotes } from "@/lib/voice-notes";
 import Avatar from "../_components/avatar";
 
@@ -56,6 +58,10 @@ export default async function MorePage() {
   if (!user) return null;
   const voiceUnread = await countUnreadVoiceNotes(user.id);
   const canSeeSettings = user.role === "OWNER" || user.role === "MANAGER";
+  const canSeePipeline = await getPipelineAccess().then(
+    (a) => a.kind === "ok",
+    () => false,
+  );
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-4">
@@ -72,6 +78,22 @@ export default async function MorePage() {
         </span>
         <ChevronRight className="w-[18px] h-[18px] text-[#6B645D]" />
       </Link>
+
+      {canSeePipeline && (
+        <Link
+          href="/pipeline"
+          className="flex items-center gap-3 rounded-[22px] bg-midnight px-4 py-3.5 text-white"
+        >
+          <span className="flex h-[38px] w-[38px] items-center justify-center rounded-[13px] bg-brand text-ink">
+            <Briefcase className="w-5 h-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-bold">Pipeline</span>
+            <span className="block text-[13px] text-white/65">Job applications, follow-ups, emails to review</span>
+          </span>
+          <ChevronRight className="w-[18px] h-[18px] text-white/60" />
+        </Link>
+      )}
 
       <Section>Capture</Section>
       <div className="grid grid-cols-2 gap-2.5">

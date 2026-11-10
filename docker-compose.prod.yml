@@ -44,6 +44,12 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      # Pipeline (job tracker). Optional: leave unset and the Pipeline stays hidden.
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      N8N_INTAKE_URL: ${N8N_INTAKE_URL:-}
+      N8N_INTAKE_TOKEN: ${N8N_INTAKE_TOKEN:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
     volumes:
       - uploads:/app/storage/uploads
     command: sh -c "npx prisma migrate deploy && npm run start"

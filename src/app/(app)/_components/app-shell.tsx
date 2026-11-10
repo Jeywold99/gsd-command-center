@@ -18,6 +18,7 @@ import {
   Timer,
   CalendarClock,
   Settings,
+  Briefcase,
   LayoutGrid,
   Plus,
   ChevronLeft,
@@ -54,6 +55,9 @@ const TITLES: Record<string, string> = {
   "/ideas": "Ideas",
   "/crm": "CRM",
   "/projects": "Projects",
+  "/pipeline": "Pipeline",
+  "/pipeline/board": "Board",
+  "/pipeline/applications": "Applications",
   "/inbox": "Inbox",
   "/chat": "Chat",
   "/vault": "Documents",
@@ -138,6 +142,7 @@ export default function AppShell({
   notifications,
   unreadCount,
   voiceUnread,
+  canSeePipeline,
   running,
   children,
 }: {
@@ -145,6 +150,7 @@ export default function AppShell({
   notifications: Notification[];
   unreadCount: number;
   voiceUnread: number;
+  canSeePipeline: boolean;
   running: { startedAt: string | Date } | null;
   children: React.ReactNode;
 }) {
@@ -167,6 +173,7 @@ export default function AppShell({
       items: [
         { href: "/tasks", label: "Tasks", icon: ListChecks },
         { href: "/calendar", label: "Calendar", icon: CalendarDays },
+        ...(canSeePipeline ? [{ href: "/pipeline", label: "Pipeline", icon: Briefcase }] : []),
       ],
     },
     {
