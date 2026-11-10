@@ -1,8 +1,8 @@
 "use client";
 
-import { startTransition, useActionState, useOptimistic, useState } from "react";
+import { startTransition, useActionState, useOptimistic, useState, useTransition } from "react";
 import { Check, ExternalLink, Plus } from "lucide-react";
-import { addRequirement, setRequirementStatus } from "../actions";
+import { addRequirement, deleteRequirement, setRequirementStatus, updateRequirement } from "../actions";
 import {
   REQUIREMENT_LABEL,
   REQUIREMENT_STATUSES,
@@ -23,7 +23,96 @@ export type RequirementView = {
   status: RequirementStatus;
   dueText: string | null;
   dueLate: boolean;
+  dueInput: string; // "YYYY-MM-DDTHH:mm" in the team's time zone, or ""
 };
+
+function RowEditor({ r }: { r: RequirementView }) {
+  const [state, action] = useActionState<FormState, FormData>(updateRequirement, {});
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startDelete] = useTransition();
+
+  function remove() {
+    setError(null);
+    startDelete(async () => {
+      const res = await deleteRequirement(r.id);
+      if (!res.ok) setError(res.error);
+    });
+  }
+
+  return (
+    <details className="mt-1 pl-11">
+      <summary className="inline-flex min-h-9 cursor-pointer list-none items-center text-xs font-bold text-[#B34100] hover:underline [&::-webkit-details-marker]:hidden">
+        Edit or delete
+      </summary>
+      <form action={action} className="mt-2 space-y-3 rounded-[16px] bg-cream p-3.5">
+        <input type="hidden" name="id" value={r.id} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={label} htmlFor={`e-type-${r.id}`}>
+              Kind
+            </label>
+            <select id={`e-type-${r.id}`} name="type" defaultValue={r.type} className={input}>
+              {REQUIREMENT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {REQUIREMENT_LABEL[t]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={label} htmlFor={`e-due-${r.id}`}>
+              Due
+            </label>
+            <input id={`e-due-${r.id}`} type="datetime-local" name="due_at" defaultValue={r.dueInput} className={input} />
+          </div>
+        </div>
+        <div>
+          <label className={label} htmlFor={`e-desc-${r.id}`}>
+            What exactly
+          </label>
+          <textarea id={`e-desc-${r.id}`} name="description" rows={2} maxLength={1000} defaultValue={r.description ?? ""} className={input} />
+        </div>
+        <div>
+          <label className={label} htmlFor={`e-link-${r.id}`}>
+            Link (for example the Loom you recorded)
+          </label>
+          <input id={`e-link-${r.id}`} name="link" type="url" inputMode="url" defaultValue={r.link ?? ""} placeholder="https://" className={input} />
+        </div>
+        <FormNote state={state} />
+        <div className="flex flex-wrap items-center gap-2">
+          <SubmitButton className={btnGhost} pendingLabel="Saving…">
+            Save
+          </SubmitButton>
+          {!confirming ? (
+            <button type="button" onClick={() => setConfirming(true)} className="inline-flex min-h-11 items-center px-3 text-sm font-bold text-red-700 hover:underline">
+              Delete
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={remove}
+                disabled={pending}
+                className="inline-flex min-h-11 items-center rounded-full bg-red-600 px-5 text-sm font-bold text-white disabled:opacity-50"
+              >
+                Yes, delete it
+              </button>
+              <button type="button" onClick={() => setConfirming(false)} className="inline-flex min-h-11 items-center px-3 text-sm font-bold text-ink/70">
+                Keep it
+              </button>
+            </>
+          )}
+        </div>
+        {error && (
+          <p role="alert" className="text-sm font-medium text-red-700">
+            {error}
+          </p>
+        )}
+      </form>
+    </details>
+  );
+}
 
 function Row({ r }: { r: RequirementView }) {
   const [status, setStatus] = useOptimistic<RequirementStatus, RequirementStatus>(r.status, (_c, next) => next);
@@ -101,6 +190,7 @@ function Row({ r }: { r: RequirementView }) {
           {error}
         </p>
       )}
+      <RowEditor r={r} />
     </li>
   );
 }

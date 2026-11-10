@@ -7,6 +7,7 @@ const TABS = [
   { href: "/pipeline", label: "Today" },
   { href: "/pipeline/board", label: "Board" },
   { href: "/pipeline/applications", label: "List" },
+  { href: "/pipeline/add", label: "+ Add" },
 ];
 
 // Today / Board / List switcher shown on the three top-level Pipeline pages (not on an application's page).

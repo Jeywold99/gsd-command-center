@@ -146,6 +146,7 @@ function Column({ status, apps, dim }: { status: Status; apps: BoardApp[]; dim?:
 }
 
 export default function Board({ apps }: { apps: BoardApp[] }) {
+  const router = useRouter();
   // Moves show instantly; if the server rejects one, React drops the optimistic change by itself.
   const [shown, applyMove] = useOptimistic(apps, (state: BoardApp[], m: { id: string; status: Status }) =>
     state.map((a) => (a.id === m.id ? { ...a, status: m.status } : a)),
@@ -180,6 +181,8 @@ export default function Board({ apps }: { apps: BoardApp[] }) {
       applyMove({ id, status: target });
       const res = await changeStatus(id, target);
       if (!res.ok) setError(res.error);
+      // A new hire: open the application, where the client + project setup is offered.
+      else if (target === "hired") router.push(`/pipeline/applications/${id}`);
     });
   }
 

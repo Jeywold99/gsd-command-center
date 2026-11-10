@@ -57,6 +57,14 @@ export const getPipelineAccess = cache(async (): Promise<PipelineAccess> => {
   return { kind: "ok", viewer: { personId: person.id, person: person.name, actor: person.name.trim().toLowerCase() } };
 });
 
+// Same check for server actions that report problems as a result instead of throwing.
+export async function gateForAction(): Promise<{ viewer: Viewer } | { error: string }> {
+  const access = await getPipelineAccess();
+  if (access.kind === "ok") return { viewer: access.viewer };
+  if (access.kind === "unavailable") return { error: access.reason };
+  redirect("/");
+}
+
 // For server actions and pages that must never run for anyone else.
 export async function requirePipelineAccess(): Promise<Viewer> {
   const access = await getPipelineAccess();

@@ -8,7 +8,6 @@ import {
   ListChecks,
   CalendarDays,
   Mic,
-  Lightbulb,
   Building2,
   FolderKanban,
   Inbox,
@@ -16,7 +15,6 @@ import {
   FolderArchive,
   KeyRound,
   Timer,
-  CalendarClock,
   Settings,
   Briefcase,
   LayoutGrid,
@@ -42,7 +40,24 @@ type Notification = {
   createdAt: Date;
 };
 
-type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number };
+// `also`: other top-level paths that belong to the same sidebar item (it stays highlighted on them).
+type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number; also?: string[] };
+
+// Sidebar items that cover two pages show a small tab switcher under the page title.
+const TAB_GROUPS: { tabs: { href: string; label: string }[] }[] = [
+  {
+    tabs: [
+      { href: "/time", label: "Tracker" },
+      { href: "/timesheet", label: "Timesheet" },
+    ],
+  },
+  {
+    tabs: [
+      { href: "/voice", label: "Voice notes" },
+      { href: "/ideas", label: "Ideas" },
+    ],
+  },
+];
 type NavGroup = { section: string | null; items: NavItem[] };
 
 // Big page titles for top-level routes. Detail pages (e.g. /projects/[id])
@@ -58,6 +73,7 @@ const TITLES: Record<string, string> = {
   "/pipeline": "Pipeline",
   "/pipeline/board": "Board",
   "/pipeline/applications": "Applications",
+  "/pipeline/add": "Add",
   "/inbox": "Inbox",
   "/chat": "Chat",
   "/vault": "Documents",
@@ -174,13 +190,7 @@ export default function AppShell({
         { href: "/tasks", label: "Tasks", icon: ListChecks },
         { href: "/calendar", label: "Calendar", icon: CalendarDays },
         ...(canSeePipeline ? [{ href: "/pipeline", label: "Pipeline", icon: Briefcase }] : []),
-      ],
-    },
-    {
-      section: "Capture",
-      items: [
-        { href: "/voice", label: "Voice notes", icon: Mic, badge: voiceUnread },
-        { href: "/ideas", label: "Ideas", icon: Lightbulb },
+        { href: "/voice", label: "Capture", icon: Mic, badge: voiceUnread, also: ["/ideas"] },
       ],
     },
     {
@@ -197,8 +207,7 @@ export default function AppShell({
       items: [
         { href: "/vault", label: "Documents", icon: FolderArchive },
         { href: "/passwords", label: "Passwords", icon: KeyRound },
-        { href: "/time", label: "Time tracker", icon: Timer },
-        { href: "/timesheet", label: "Timesheet", icon: CalendarClock },
+        { href: "/time", label: "Time", icon: Timer, also: ["/timesheet"] },
         ...(canSeeSettings ? [{ href: "/settings", label: "Settings", icon: Settings }] : []),
       ],
     },
@@ -212,6 +221,7 @@ export default function AppShell({
   const openDetail =
     (pathname === "/inbox" && searchParams.has("thread")) || (pathname === "/chat" && searchParams.has("channel"));
   const titleDesktopOnly = (!TITLES[pathname] && !!splitTitle) || openDetail;
+  const tabGroup = TAB_GROUPS.find((g) => g.tabs.some((t) => t.href === pathname));
   const isTabRoot = TAB_ROOTS.includes(pathname);
   const moreActive = !["/", "/tasks", "/calendar"].some((h) => isActivePath(pathname, h));
 
@@ -240,7 +250,11 @@ export default function AppShell({
                 </p>
               )}
               {group.items.map((item) => (
-                <SideLink key={item.href} item={item} active={isActivePath(pathname, item.href)} />
+                <SideLink
+                  key={item.href}
+                  item={item}
+                  active={[item.href, ...(item.also ?? [])].some((h) => isActivePath(pathname, h))}
+                />
               ))}
             </div>
           ))}
@@ -308,6 +322,25 @@ export default function AppShell({
                 </div>
               </div>
             </div>
+          )}
+          {tabGroup && (
+            <nav aria-label="Section" className="mb-5 flex w-fit gap-1 rounded-full border border-black/[0.07] bg-white p-1">
+              {tabGroup.tabs.map((t) => {
+                const on = t.href === pathname;
+                return (
+                  <Link
+                    key={t.href}
+                    href={t.href}
+                    aria-current={on ? "page" : undefined}
+                    className={`inline-flex min-h-10 items-center rounded-full px-5 text-sm font-bold transition ${
+                      on ? "bg-midnight text-white" : "text-ink/60 hover:text-ink"
+                    }`}
+                  >
+                    {t.label}
+                  </Link>
+                );
+              })}
+            </nav>
           )}
           {children}
         </main>

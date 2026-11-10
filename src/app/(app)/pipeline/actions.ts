@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getPipelineAccess } from "@/lib/pipeline/access";
+import { NEW_STATUSES, type PreviewResult, type SaveNewResult } from "@/lib/pipeline/draft";
 import { fromInputLocal } from "@/lib/pipeline/format";
+import { readJobPost } from "@/lib/pipeline/intake";
 import { isUuid, sbRpc, userMessage } from "@/lib/pipeline/supabase";
 import {
   ACTIVITY_TYPES,
@@ -277,4 +279,194 @@ export async function dismissEmail(_prev: FormState, fd: FormData): Promise<Form
   }
   refresh();
   return { ok: true, message: "Dismissed." };
+}
+
+// ── requirements: edit and delete ───────────────────────────────────────────────────────────────────
+export async function updateRequirement(_prev: FormState, fd: FormData): Promise<FormState> {
+  const g = await gate();
+  if ("error" in g) return { ok: false, error: g.error };
+
+  const id = field(fd, "id");
+  const type = field(fd, "type");
+  const description = field(fd, "description");
+  const link = field(fd, "link");
+  if (!isUuid(id)) return { ok: false, error: "Unknown requirement." };
+  if (!(REQUIREMENT_TYPES as readonly string[]).includes(type)) return { ok: false, error: "Pick what kind of requirement it is." };
+  if (description.length > 1000) return { ok: false, error: "The description is too long." };
+  if (link && !/^https?:\/\/\S+$/i.test(link)) return { ok: false, error: "The link must start with http:// or https://" };
+  const due = dateField(fd, "due_at", "The due date");
+  if ("error" in due) return { ok: false, error: due.error };
+
+  try {
+    await sbRpc("update_requirement", {
+      p_id: id,
+      p_patch: { type, description: description || null, link: link || null, due_at: due.value },
+      p_actor: g.viewer.actor,
+    });
+  } catch (e) {
+    return failState(e);
+  }
+  refresh();
+  return { ok: true, message: "Saved." };
+}
+
+export async function deleteRequirement(id: string): Promise<ActionResult> {
+  const g = await gate();
+  if ("error" in g) return { ok: false, error: g.error };
+  if (!isUuid(id)) return { ok: false, error: "Unknown requirement." };
+  try {
+    await sbRpc("delete_requirement", { p_id: id });
+  } catch (e) {
+    return fail(e);
+  }
+  refresh();
+  return { ok: true };
+}
+
+// ── delete an application (with its requirements and history) ───────────────────────────────────────
+export async function deleteApplication(id: string): Promise<ActionResult> {
+  const g = await gate();
+  if ("error" in g) return { ok: false, error: g.error };
+  if (!isUuid(id)) return { ok: false, error: "Unknown application." };
+  try {
+    await sbRpc("delete_application", { p_id: id });
+  } catch (e) {
+    return fail(e);
+  }
+  refresh();
+  redirect("/pipeline/applications");
+}
+
+// ── add an application from a job post ──────────────────────────────────────────────────────────────
+// Step 1: the AI reads the post (via n8n, preview mode: nothing is saved) and returns a draft to review.
+export async function previewPost(fd: FormData): Promise<PreviewResult> {
+  const g = await gate();
+  if ("error" in g) return { ok: false, error: g.error };
+
+  const person = field(fd, "person");
+  const jobUrl = field(fd, "job_url");
+  const jobText = field(fd, "job_text");
+  if (!person) return { ok: false, error: "Choose who this application is for." };
+  if (!jobUrl && !jobText) return { ok: false, error: "Paste the job post, or give its link." };
+  if (jobUrl && !/^https?:\/\/\S+$/i.test(jobUrl)) return { ok: false, error: "The link must start with http:// or https://" };
+  if (jobText.length > 150_000) return { ok: false, error: "That text is too long. Paste just the post." };
+
+  try {
+    const draft = await readJobPost({ person, jobUrl, jobText });
+    return { ok: true, draft };
+  } catch (e) {
+    return { ok: false, error: userMessage(e) };
+  }
+}
+
+const draftSchema = z.object({
+  person: z.string().trim().min(1, "Choose who this application is for.").max(100),
+  company: z.string().trim().max(200, "The company name is too long."),
+  role: z.string().trim().min(1, "The role is required.").max(200, "The role is too long."),
+  job_url: z
+    .string()
+    .trim()
+    .max(2000)
+    .refine((v) => v === "" || /^https?:\/\/\S+$/i.test(v), "The job link must start with http:// or https://"),
+  platform: z.string().trim().refine((v) => v === "" || (PLATFORMS as readonly string[]).includes(v), "Unknown platform."),
+  applied_as: z.string().trim().refine((v) => v === "" || (APPLIED_AS as readonly string[]).includes(v), "Unknown value for 'Applied as'."),
+  status: z.enum(NEW_STATUSES),
+  rate_offered: z.string().trim().max(200),
+  deadline: z.string().trim(),
+  contact_name: z.string().trim().max(200),
+  contact_email: z
+    .string()
+    .trim()
+    .max(320)
+    .refine((v) => v === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), "That contact email does not look right."),
+  company_domain: z.string().trim().max(200),
+  notes: z.string().trim().max(20000),
+  job_description: z.string().max(200_000),
+  requirements: z
+    .array(
+      z.object({
+        type: z.enum(REQUIREMENT_TYPES),
+        description: z.string().trim().max(1000, "A requirement description is too long."),
+        due: z.string().trim(),
+      }),
+    )
+    .max(40, "That is a lot of requirements (40 max)."),
+});
+
+// Step 2: save the reviewed draft. On success this redirects to the new application.
+export async function saveNewApplication(input: unknown): Promise<SaveNewResult> {
+  const g = await gate();
+  if ("error" in g) return { ok: false, error: g.error };
+
+  const parsed = draftSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the form." };
+  const d = parsed.data;
+
+  let deadline: string | null = null;
+  if (d.deadline) {
+    deadline = fromInputLocal(d.deadline);
+    if (!deadline) return { ok: false, error: "The deadline is not a valid date." };
+  }
+  const requirements: { type: string; description: string | null; due_at: string | null }[] = [];
+  for (const r of d.requirements) {
+    let due: string | null = null;
+    if (r.due) {
+      due = fromInputLocal(r.due);
+      if (!due) return { ok: false, error: "A requirement has an invalid due date." };
+    }
+    if (!r.description && r.type === "other") continue; // an empty "other" row adds nothing
+    requirements.push({ type: r.type, description: r.description || null, due_at: due });
+  }
+
+  let id: string;
+  try {
+    const out = await sbRpc<{ created: boolean; application_id: string; company?: string; role?: string }>(
+      "create_application_with_requirements",
+      {
+        payload: {
+          person: d.person,
+          actor: g.viewer.actor,
+          application: {
+            company: d.company || null,
+            role: d.role,
+            job_url: d.job_url || null,
+            platform: d.platform || null,
+            applied_as: d.applied_as || null,
+            status: d.status,
+            rate_offered: d.rate_offered || null,
+            deadline,
+            contact_name: d.contact_name || null,
+            contact_email: d.contact_email || null,
+            company_domain: d.company_domain
+              ? d.company_domain.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/[/?#].*$/, "")
+              : null,
+            job_description: d.job_description || null,
+            notes: d.notes || null,
+          },
+          requirements,
+        },
+      },
+    );
+    if (!out.created) {
+      return {
+        ok: false,
+        error: `"${out.role ?? d.role}" at ${out.company ?? "that company"} is already in the tracker for ${d.person}.`,
+        existingId: out.application_id,
+      };
+    }
+    id = out.application_id;
+    if (d.status === "applied") {
+      // The database only stamps the applied date on a later status change, so set it for a post saved as "applied".
+      await sbRpc("update_application", {
+        p_id: id,
+        p_patch: { applied_at: new Date().toISOString() },
+        p_actor: g.viewer.actor,
+      }).catch(() => undefined);
+    }
+  } catch (e) {
+    return { ok: false, error: userMessage(e) };
+  }
+
+  refresh();
+  redirect(`/pipeline/applications/${id}`);
 }

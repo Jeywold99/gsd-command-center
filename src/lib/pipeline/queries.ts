@@ -81,6 +81,30 @@ export function listEvents(applicationId: string, limit = 100): Promise<EventRow
   });
 }
 
+export async function listPeopleNames(): Promise<string[]> {
+  const rows = await sbSelect<{ name: string }>("people", { select: "name", order: "name.asc" });
+  return rows.map((r) => r.name);
+}
+
+// The Command Center client/project this application was handed off to (set when it was marked hired).
+// The application_overview view does not carry these columns, so read the table directly.
+export async function getApplicationLinks(
+  id: string,
+): Promise<{ clientId: string | null; projectId: string | null }> {
+  if (!isUuid(id)) return { clientId: null, projectId: null };
+  try {
+    const rows = await sbSelect<{ external_client_id: string | null; external_project_id: string | null }>("applications", {
+      select: "external_client_id,external_project_id",
+      id: `eq.${id}`,
+      limit: "1",
+    });
+    return { clientId: rows[0]?.external_client_id ?? null, projectId: rows[0]?.external_project_id ?? null };
+  } catch {
+    // Older database without the columns yet: treat as "not linked" instead of breaking the page.
+    return { clientId: null, projectId: null };
+  }
+}
+
 export function getDigest(person: string): Promise<Digest> {
   return sbRpc<Digest>("daily_digest", { p_person: person });
 }

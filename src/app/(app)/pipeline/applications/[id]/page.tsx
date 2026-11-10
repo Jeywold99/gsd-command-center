@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Mail } from "lucide-react";
+import { ArrowLeft, ExternalLink, FolderKanban, Mail, Building2 } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 import { requirePipelineAccess } from "@/lib/pipeline/access";
+import { inferCurrency, parseHourlyRate } from "@/lib/pipeline/handoff";
 import { ago, dueIn, fmtDay, fmtDayTime, toInputLocal } from "@/lib/pipeline/format";
-import { getApplication, listEvents, listRequirements } from "@/lib/pipeline/queries";
+import { getApplication, getApplicationLinks, listEvents, listRequirements } from "@/lib/pipeline/queries";
 import { APPLIED_AS_LABEL, PLATFORM_LABEL } from "@/lib/pipeline/types";
+import DeleteApplication from "../../_components/delete-application";
 import EditDetails from "../../_components/edit-details";
+import HandoffCard from "../../_components/handoff-card";
 import LogActivity from "../../_components/log-activity";
 import Requirements, { type RequirementView } from "../../_components/requirements";
 import StatusPicker from "../../_components/status-picker";
@@ -27,7 +31,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
   const app = await getApplication(id);
   if (!app) notFound();
 
-  const [reqs, events] = await Promise.all([listRequirements(id), listEvents(id)]);
+  const [reqs, events, links] = await Promise.all([listRequirements(id), listEvents(id), getApplicationLinks(id)]);
 
   const reqViews: RequirementView[] = reqs.map((r) => {
     const due = r.due_at ? dueIn(r.due_at) : null;
@@ -39,10 +43,28 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
       status: r.status,
       dueText: r.due_at ? `${fmtDayTime(r.due_at)}${due?.label ? ` (${due.label})` : ""}` : null,
       dueLate: Boolean(due?.late),
+      dueInput: toInputLocal(r.due_at),
     };
   });
 
   const nextDue = app.next_action_at ? dueIn(app.next_action_at) : null;
+
+  // Hired and not yet handed off: offer to create the client and project (reusing a client of the same name).
+  const needsHandoff = app.status === "hired" && !links.clientId;
+  const openCount = reqs.filter((r) => r.status === "needed" || r.status === "in_progress").length;
+  let existingClient: { id: string; name: string } | null = null;
+  if (needsHandoff && app.company !== "Unnamed company") {
+    try {
+      const c = await prisma.client.findFirst({
+        where: { companyName: { equals: app.company, mode: "insensitive" } },
+        select: { id: true, companyName: true },
+      });
+      if (c) existingClient = { id: c.id, name: c.companyName };
+    } catch (e) {
+      console.error("[pipeline] client lookup failed:", e);
+    }
+  }
+  const hourly = parseHourlyRate(app.rate_offered);
 
   return (
     <div className="space-y-5">
@@ -115,6 +137,42 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
         )}
       </section>
 
+      {needsHandoff && (
+        <HandoffCard
+          applicationId={app.id}
+          rateText={app.rate_offered}
+          existingClient={existingClient}
+          taskCount={openCount}
+          defaults={{
+            companyName: app.company === "Unnamed company" ? "" : app.company,
+            serviceType: app.role,
+            currency: inferCurrency(app.rate_offered),
+            hourlyRate: hourly != null ? String(hourly) : "",
+            hoursPerWeek: "",
+            payFrequency: "",
+            website: app.company_domain ?? "",
+            contactName: app.contact_name ?? "",
+            contactEmail: app.contact_email ?? "",
+            projectName: app.role,
+            startDate: toInputLocal(new Date().toISOString()).slice(0, 10),
+          }}
+        />
+      )}
+
+      {links.clientId && (
+        <section className={`${card} flex flex-wrap items-center gap-3`} aria-label="Command Center links">
+          <p className="mr-auto text-sm font-bold text-ink">Set up in the Command Center</p>
+          <Link href={`/crm/${links.clientId}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-black/10 px-4 text-sm font-bold hover:border-brand/50">
+            <Building2 className="h-4 w-4" aria-hidden /> Client
+          </Link>
+          {links.projectId && (
+            <Link href={`/projects/${links.projectId}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-black/10 px-4 text-sm font-bold hover:border-brand/50">
+              <FolderKanban className="h-4 w-4" aria-hidden /> Project
+            </Link>
+          )}
+        </section>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
           <section className={card} aria-labelledby="req-h">
@@ -180,6 +238,8 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
           </p>
         </details>
       )}
+
+      <DeleteApplication id={app.id} company={app.company} />
     </div>
   );
 }

@@ -270,3 +270,6 @@ export type Viewer = {
 export type ActionResult = { ok: true } | { ok: false; error: string };
 // State of a form wired to useActionState.
 export type FormState = { ok?: boolean; error?: string; message?: string };
+// Hired -> client + project. `partial` is set when the client and project were created but linking back to the
+// tracker failed, so pressing the button again only finishes the link instead of creating duplicates.
+export type HandoffState = FormState & { partial?: { clientId: string; projectId: string } };
