@@ -49,7 +49,7 @@ function describe(status: number, body: unknown): PipelineError {
   if (status === 401 || status === 403) {
     return new PipelineError("Supabase rejected the key. Check SUPABASE_SECRET_KEY on the server.", "auth");
   }
-  if (code === "PGRST202" || code === "42883" || code === "42P01" || code === "PGRST205") {
+  if (code === "PGRST202" || code === "42883" || code === "42P01" || code === "PGRST205" || code === "42703") {
     return new PipelineError(
       "The database is missing a migration the Pipeline needs. Run `npx supabase db push` from the job-tracker repo.",
       "missing-migration",

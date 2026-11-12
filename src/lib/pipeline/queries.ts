@@ -2,6 +2,7 @@ import "server-only";
 import { sbRpc, sbSelect, isUuid } from "./supabase";
 import type {
   ApplicationOverview,
+  AssetRow,
   Digest,
   EventRow,
   PipelineStat,
@@ -79,6 +80,38 @@ export function listEvents(applicationId: string, limit = 100): Promise<EventRow
     order: "occurred_at.desc",
     limit: String(limit),
   });
+}
+
+export function listAssets(personId: string): Promise<AssetRow[]> {
+  if (!isUuid(personId)) return Promise.resolve([]);
+  return sbSelect<AssetRow>("assets", {
+    select: "id,person_id,type,title,url,notes,created_at",
+    person_id: `eq.${personId}`,
+    order: "created_at.desc",
+    limit: "500",
+  });
+}
+
+// Which assets are attached to which requirements of one application, keyed by requirement id.
+export async function listRequirementAssets(
+  requirementIds: string[],
+): Promise<Record<string, { id: string; title: string; type: string; url: string | null }[]>> {
+  const ids = requirementIds.filter(isUuid);
+  if (!ids.length) return {};
+  try {
+    const rows = await sbSelect<{
+      requirement_id: string;
+      assets: { id: string; title: string; type: string; url: string | null } | null;
+    }>("requirement_assets", {
+      select: "requirement_id,assets(id,title,type,url)",
+      requirement_id: `in.(${ids.join(",")})`,
+    });
+    const out: Record<string, { id: string; title: string; type: string; url: string | null }[]> = {};
+    for (const r of rows) if (r.assets) (out[r.requirement_id] ??= []).push(r.assets);
+    return out;
+  } catch {
+    return {};
+  }
 }
 
 export async function listPeopleNames(): Promise<string[]> {

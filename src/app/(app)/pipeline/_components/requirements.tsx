@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useOptimistic, useState, useTransition } from "react";
 import { Check, ExternalLink, Plus } from "lucide-react";
 import { addRequirement, deleteRequirement, setRequirementStatus, updateRequirement } from "../actions";
+import { attachAsset, detachAsset } from "../assets-actions";
 import {
   REQUIREMENT_LABEL,
   REQUIREMENT_STATUSES,
@@ -24,7 +25,11 @@ export type RequirementView = {
   dueText: string | null;
   dueLate: boolean;
   dueInput: string; // "YYYY-MM-DDTHH:mm" in the team's time zone, or ""
+  attached: { id: string; title: string }[]; // assets recorded against this requirement
 };
+
+// An asset the person can attach (label already includes its kind).
+export type AssetChoice = { id: string; label: string };
 
 function RowEditor({ r }: { r: RequirementView }) {
   const [state, action] = useActionState<FormState, FormData>(updateRequirement, {});
@@ -114,11 +119,29 @@ function RowEditor({ r }: { r: RequirementView }) {
   );
 }
 
-function Row({ r }: { r: RequirementView }) {
+function Row({ r, assets }: { r: RequirementView; assets: AssetChoice[] }) {
   const [status, setStatus] = useOptimistic<RequirementStatus, RequirementStatus>(r.status, (_c, next) => next);
   const [error, setError] = useState<string | null>(null);
   const done = status === "done";
   const muted = done || status === "not_applicable";
+
+  function attach(assetId: string) {
+    if (!assetId) return;
+    setError(null);
+    startTransition(async () => {
+      setStatus("done");
+      const res = await attachAsset(r.id, assetId);
+      if (!res.ok) setError(res.error);
+    });
+  }
+
+  function detach(assetId: string) {
+    setError(null);
+    startTransition(async () => {
+      const res = await detachAsset(r.id, assetId);
+      if (!res.ok) setError(res.error);
+    });
+  }
 
   function change(next: RequirementStatus) {
     if (next === status) return;
@@ -168,6 +191,43 @@ function Row({ r }: { r: RequirementView }) {
               </a>
             )}
           </div>
+          {r.attached.length > 0 && (
+            <ul className="mt-1.5 flex flex-wrap gap-1.5">
+              {r.attached.map((a) => (
+                <li key={a.id} className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-[11px] font-bold text-[#0B7A52]">
+                  {a.title}
+                  <button
+                    type="button"
+                    onClick={() => detach(a.id)}
+                    aria-label={`Detach ${a.title}`}
+                    className="ml-0.5 text-[#0B7A52]/70 hover:text-red-700"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {assets.length > 0 && !done && (
+            <>
+              <label className="sr-only" htmlFor={`att-${r.id}`}>
+                Attach one of your assets
+              </label>
+              <select
+                id={`att-${r.id}`}
+                value=""
+                onChange={(e) => attach(e.target.value)}
+                className="mt-2 min-h-9 max-w-full rounded-full border border-dashed border-black/20 bg-white px-3 text-xs font-bold text-[#B34100] outline-none focus:border-brand"
+              >
+                <option value="">Attach an asset…</option>
+                {assets.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
         <label className="sr-only" htmlFor={`req-${r.id}`}>
           Requirement status
@@ -246,7 +306,15 @@ function AddForm({ applicationId }: { applicationId: string }) {
   );
 }
 
-export default function Requirements({ applicationId, items }: { applicationId: string; items: RequirementView[] }) {
+export default function Requirements({
+  applicationId,
+  items,
+  assets,
+}: {
+  applicationId: string;
+  items: RequirementView[];
+  assets: AssetChoice[];
+}) {
   return (
     <div>
       {items.length === 0 ? (
@@ -254,7 +322,7 @@ export default function Requirements({ applicationId, items }: { applicationId: 
       ) : (
         <ul className="divide-y divide-black/[0.06]">
           {items.map((r) => (
-            <Row key={r.id} r={r} />
+            <Row key={r.id} r={r} assets={assets} />
           ))}
         </ul>
       )}

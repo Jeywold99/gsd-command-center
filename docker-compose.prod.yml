@@ -49,7 +49,6 @@ services:
       SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       N8N_INTAKE_URL: ${N8N_INTAKE_URL:-}
       N8N_INTAKE_TOKEN: ${N8N_INTAKE_TOKEN:-}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
     volumes:
       - uploads:/app/storage/uploads
     command: sh -c "npx prisma migrate deploy && npm run start"

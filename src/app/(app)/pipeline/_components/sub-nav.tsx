@@ -7,6 +7,7 @@ const TABS = [
   { href: "/pipeline", label: "Today" },
   { href: "/pipeline/board", label: "Board" },
   { href: "/pipeline/applications", label: "List" },
+  { href: "/pipeline/assets", label: "Assets" },
   { href: "/pipeline/add", label: "+ Add" },
 ];
 

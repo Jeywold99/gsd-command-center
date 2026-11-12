@@ -114,6 +114,26 @@ export const REQUIREMENT_STATUS_LABEL: Record<RequirementStatus, string> = {
   not_applicable: "Not needed",
 };
 
+export const ASSET_TYPES = ["loom", "resume", "portfolio", "case_study", "other"] as const;
+export type AssetType = (typeof ASSET_TYPES)[number];
+export const ASSET_LABEL: Record<AssetType, string> = {
+  loom: "Loom video",
+  resume: "Resume",
+  portfolio: "Portfolio",
+  case_study: "Case study",
+  other: "Other",
+};
+
+export type AssetRow = {
+  id: string;
+  person_id: string;
+  type: AssetType;
+  title: string;
+  url: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 // Things a person can record by hand (the rest are written by the system).
 export const ACTIVITY_TYPES = [
   { value: "note", label: "Note" },

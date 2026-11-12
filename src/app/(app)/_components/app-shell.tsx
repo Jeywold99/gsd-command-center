@@ -74,6 +74,7 @@ const TITLES: Record<string, string> = {
   "/pipeline/board": "Board",
   "/pipeline/applications": "Applications",
   "/pipeline/add": "Add",
+  "/pipeline/assets": "Assets",
   "/inbox": "Inbox",
   "/chat": "Chat",
   "/vault": "Documents",

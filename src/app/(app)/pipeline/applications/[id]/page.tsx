@@ -5,8 +5,15 @@ import { prisma } from "@/lib/prisma";
 import { requirePipelineAccess } from "@/lib/pipeline/access";
 import { inferCurrency, parseHourlyRate } from "@/lib/pipeline/handoff";
 import { ago, dueIn, fmtDay, fmtDayTime, toInputLocal } from "@/lib/pipeline/format";
-import { getApplication, getApplicationLinks, listEvents, listRequirements } from "@/lib/pipeline/queries";
-import { APPLIED_AS_LABEL, PLATFORM_LABEL } from "@/lib/pipeline/types";
+import {
+  getApplication,
+  getApplicationLinks,
+  listAssets,
+  listEvents,
+  listRequirementAssets,
+  listRequirements,
+} from "@/lib/pipeline/queries";
+import { APPLIED_AS_LABEL, ASSET_LABEL, PLATFORM_LABEL } from "@/lib/pipeline/types";
 import DeleteApplication from "../../_components/delete-application";
 import EditDetails from "../../_components/edit-details";
 import HandoffCard from "../../_components/handoff-card";
@@ -31,7 +38,13 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
   const app = await getApplication(id);
   if (!app) notFound();
 
-  const [reqs, events, links] = await Promise.all([listRequirements(id), listEvents(id), getApplicationLinks(id)]);
+  const [reqs, events, links, assets] = await Promise.all([
+    listRequirements(id),
+    listEvents(id),
+    getApplicationLinks(id),
+    listAssets(app.person_id),
+  ]);
+  const attachedByReq = await listRequirementAssets(reqs.map((r) => r.id));
 
   const reqViews: RequirementView[] = reqs.map((r) => {
     const due = r.due_at ? dueIn(r.due_at) : null;
@@ -44,6 +57,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
       dueText: r.due_at ? `${fmtDayTime(r.due_at)}${due?.label ? ` (${due.label})` : ""}` : null,
       dueLate: Boolean(due?.late),
       dueInput: toInputLocal(r.due_at),
+      attached: (attachedByReq[r.id] ?? []).map((a) => ({ id: a.id, title: a.title })),
     };
   });
 
@@ -179,7 +193,11 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
             <h3 id="req-h" className="mb-1 font-display text-[28px] leading-none tracking-[0.01em]">
               Requirements
             </h3>
-            <Requirements applicationId={app.id} items={reqViews} />
+            <Requirements
+              applicationId={app.id}
+              items={reqViews}
+              assets={assets.map((a) => ({ id: a.id, label: `${ASSET_LABEL[a.type]}: ${a.title}` }))}
+            />
           </section>
 
           <section className={card} aria-labelledby="log-h">
