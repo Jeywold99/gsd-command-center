@@ -22,6 +22,15 @@ enum Role {
   OWNER
   MANAGER
   STAFF
+  // A client signing in to their own portal (e.g. nathan.<domain>). Never gets a
+  // team session; only the portal routes accept it.
+  CLIENT
+}
+
+// Whether a document appears in its client's portal. Null = team only (GSD
+// Vault). SHARED = in the portal too, open to the client and the whole team.
+enum PortalVisibility {
+  SHARED
 }
 
 enum ClientStatus {
@@ -158,19 +167,26 @@ enum EmailStatus {
 // ── Auth & People ────────────────────────────────────────────────────────────
 
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  name         String
-  passwordHash String
-  role         Role      @default(STAFF)
-  avatarUrl    String?
-  isActive     Boolean   @default(true)
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  role          Role      @default(STAFF)
+  avatarUrl     String?
+  isActive      Boolean   @default(true)
   // Optional per-person cost rate, used only for the payroll export.
   // (Client invoicing uses Client.billingRate — see spec.)
-  payRate      Decimal?  @db.Decimal(12, 2)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  payRate       Decimal?  @db.Decimal(12, 2)
+  lastLoginAt   DateTime?
+  // Set only for role CLIENT: the client whose portal this person signs in to.
+  clientId      String?
+  client        Client?   @relation("ClientUsers", fields: [clientId], references: [id], onDelete: SetNull)
+  // Two-step verification (TOTP), required for portal sign-in. The secret is
+  // encrypted with lib/secrets; enabledAt is set once the first code checks out.
+  totpSecret    String?
+  totpEnabledAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relations (back-references)
   tasksCreated      Task[]             @relation("TaskCreatedBy")
@@ -195,8 +211,11 @@ model User {
   ideas             Idea[]
   voiceKey          VoiceKey?
   pushSubscriptions PushSubscription[]
+  taskActivities    TaskActivity[]
+  portalAccessLogs  PortalAccessLog[]
 
   @@index([role])
+  @@index([clientId])
 }
 
 model Invite {
@@ -239,18 +258,23 @@ model Client {
   website       String?
   startDate     DateTime?
   renewalDate   DateTime?
+  // Subdomain label of this client's portal (e.g. "nathan" -> nathan.<domain>).
+  portalSlug    String?        @unique
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
-  contacts       Contact[]
-  projects       Project[]
-  notes          ClientNote[]
-  channels       Channel[]
-  calendarEvents CalendarEvent[]
-  documents      Document[]
-  billingRates   BillingRate[]
-  emailThreads   EmailThread[]
-  credentials    Credential[]
+  portalUsers      User[]            @relation("ClientUsers")
+  portalLogins     PortalLogin[]
+  portalAccessLogs PortalAccessLog[]
+  contacts         Contact[]
+  projects         Project[]
+  notes            ClientNote[]
+  channels         Channel[]
+  calendarEvents   CalendarEvent[]
+  documents        Document[]
+  billingRates     BillingRate[]
+  emailThreads     EmailThread[]
+  credentials      Credential[]
 
   @@index([status])
   @@index([pipelineStage])
@@ -318,9 +342,17 @@ model Project {
   budget      Decimal?      @db.Decimal(14, 2)
   startDate   DateTime?
   dueDate     DateTime?
+  // Client-portal presentation: each of a client's businesses is one project.
+  portalShort String? // short tag, e.g. "SCUSA"
+  portalKind  String? // e.g. "Nonprofit · President"
+  portalColor String? // hex accent for tags and bars
+  portalOrder Int?
+  workstreams String[]      @default([])
+  portalNote  String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  portalLogins   PortalLogin[]
   milestones     Milestone[]
   tasks          Task[]
   channels       Channel[]
@@ -385,6 +417,19 @@ model Task {
   // Set when the task was auto-created from a voice-note transcription.
   voiceNoteId        String?
   voiceNote          VoiceNote?           @relation(fields: [voiceNoteId], references: [id], onDelete: SetNull)
+  // ── Client-portal fields (all optional; plain GSD tasks leave them empty) ──
+  workstream         String?
+  // First day of the month this task is planned for.
+  month              DateTime?            @db.Date
+  nextAction         String?
+  // "Waiting on": who it's blocked by + when we chase them.
+  waitingOn          String?
+  chaseDate          DateTime?
+  // "Needs <client>" ask: APPROVE | DECIDE | SIGN (status IN_REVIEW).
+  askType            String?
+  outcome            String?
+  // Portal trash: deleted tasks are archived + stamped, restorable for 30 days.
+  deletedAt          DateTime?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
@@ -394,8 +439,11 @@ model Task {
   calendarEvents CalendarEvent[]
   documents      Document[]
   ideasConverted Idea[]          @relation("IdeaTask")
+  activities     TaskActivity[]
 
   @@index([projectId])
+  @@index([month])
+  @@index([deletedAt])
   @@index([voiceNoteId])
   @@index([milestoneId])
   @@index([parentId])
@@ -504,30 +552,33 @@ model CalendarAttendee {
 // ── Files: Document Vault + Project Folders + chat attachments ────────────────
 
 model Document {
-  id           String   @id @default(uuid())
-  name         String // original filename
-  storagePath  String // path on disk / bucket key (storage interface)
-  mimeType     String
-  sizeBytes    Int
+  id               String            @id @default(uuid())
+  name             String // original filename
+  storagePath      String // path on disk / bucket key (storage interface)
+  mimeType         String
+  sizeBytes        Int
   // Free-form vault category, e.g. 'SOP', 'Contract', 'Asset'.
-  category     String?
-  uploadedById String
-  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  category         String?
+  uploadedById     String
+  uploadedBy       User              @relation(fields: [uploadedById], references: [id])
   // Any/all may be set: tied to a client, a project folder, or a chat message.
-  clientId     String?
-  client       Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  projectId    String?
-  project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  messageId    String?
-  message      Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  taskId       String?
-  task         Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  isArchived   Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  clientId         String?
+  client           Client?           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId        String?
+  project          Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messageId        String?
+  message          Message?          @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  taskId           String?
+  task             Task?             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  isArchived       Boolean           @default(false)
+  portalVisibility PortalVisibility?
+  expiresAt        DateTime?
+  createdAt        DateTime          @default(now())
 
   @@index([clientId])
   @@index([projectId])
   @@index([taskId])
+  @@index([portalVisibility])
   @@index([category])
 }
 
@@ -788,4 +839,55 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// ── Client portal ────────────────────────────────────────────────────────────
+
+// Change history + comments on a task, shown on the portal task card.
+model TaskActivity {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // CREATED | UPDATED | STATUS | COMMENT | APPROVED | DELETED | RESTORED
+  kind      String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([taskId, createdAt])
+}
+
+// Details about a login (never the password itself; that stays in the
+// password manager). Shown on the portal Vault's "Logins and access" tab.
+model PortalLogin {
+  id            String    @id @default(uuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  service       String
+  sharedWith    String
+  twoFactor     Boolean   @default(false)
+  lastChangedAt DateTime?
+  // Link to the item in the password manager.
+  url           String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([clientId])
+}
+
+// Who opened, uploaded or deleted what in a client portal.
+model PortalAccessLog {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  target    String
+  createdAt DateTime @default(now())
+
+  @@index([clientId, createdAt])
 }

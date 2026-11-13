@@ -166,7 +166,7 @@ export async function listActiveClients() {
 
 export async function listUsers() {
   return prisma.user.findMany({
-    where: { isActive: true },
+    where: { isActive: true, role: { not: "CLIENT" } },
     orderBy: { name: "asc" },
     select: { id: true, name: true, role: true },
   });

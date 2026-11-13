@@ -27,6 +27,8 @@ export async function regenerateIfRecurring(taskId: string) {
       dueDate: true,
       recurrence: true,
       recurrenceInterval: true,
+      workstream: true,
+      nextAction: true,
       assignees: { select: { userId: true } },
     },
   });
@@ -54,6 +56,9 @@ export async function regenerateIfRecurring(taskId: string) {
         position: (max._max.position ?? 0) + 1,
         recurrence: task.recurrence,
         recurrenceInterval: task.recurrenceInterval,
+        // Client-portal fields carry over; the month follows the new due date.
+        workstream: task.workstream,
+        nextAction: task.nextAction,
         assignees: task.assignees.length
           ? { create: task.assignees.map((a) => ({ userId: a.userId })) }
           : undefined,

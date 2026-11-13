@@ -4,6 +4,7 @@ import { prisma } from "./prisma";
 // Team roster for the Settings → Team page (safe columns only — no hashes).
 export async function listTeam() {
   return prisma.user.findMany({
+    where: { role: { not: "CLIENT" } },
     orderBy: [{ isActive: "desc" }, { role: "asc" }, { name: "asc" }],
     select: {
       id: true,

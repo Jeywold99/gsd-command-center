@@ -13,7 +13,8 @@ import type { Role } from "./definitions";
 export const verifySession = cache(async () => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = await decrypt(token);
-  if (!session?.userId) redirect("/login");
+  // Client-portal accounts (role CLIENT) never get into the team app.
+  if (!session?.userId || session.role === "CLIENT") redirect("/login");
   return { userId: session.userId, role: session.role as Role };
 });
 

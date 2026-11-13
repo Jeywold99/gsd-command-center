@@ -36,7 +36,7 @@ export async function createProject(
 
   // Notify the rest of the team that a new project exists.
   const team = await prisma.user.findMany({
-    where: { isActive: true, id: { not: session.userId } },
+    where: { isActive: true, role: { not: "CLIENT" }, id: { not: session.userId } },
     select: { id: true },
   });
   await notifyMany(

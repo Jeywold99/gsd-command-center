@@ -1,0 +1,195 @@
+/* Client-portal look (from the Command Center design draft): light, calm,
+   Inter, one colour per business. Everything is scoped under .portal so none
+   of it can leak into the GSD team app. */
+
+.portal {
+  --p-bg: #f4f5f7;
+  --p-card: #ffffff;
+  --p-ink: #111827;
+  --p-muted: #4b5563;
+  --p-faint: #6b7280;
+  --p-line: #e5e7eb;
+  --p-line-strong: #d1d5db;
+  --p-accent: #1e40af;
+  --p-needs: #c2410c;
+  --p-needs-bg: #fff7ed;
+  --p-danger: #b91c1c;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--p-bg);
+  color: var(--p-ink);
+  font-family: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.portal a {
+  color: inherit;
+}
+
+.portal .p-card {
+  background: var(--p-card);
+  border: 1px solid var(--p-line);
+  border-radius: 14px;
+}
+
+.portal .p-h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.portal .p-h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+.portal .p-muted {
+  color: var(--p-muted);
+}
+.portal .p-faint {
+  color: var(--p-faint);
+}
+.portal .p-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--p-muted);
+}
+
+.portal .p-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--p-line-strong);
+  background: #fff;
+  color: var(--p-ink);
+  font: 600 14px var(--font-inter), system-ui, sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.portal .p-btn:hover {
+  background: #f9fafb;
+}
+.portal .p-btn-primary {
+  background: var(--p-ink);
+  border-color: var(--p-ink);
+  color: #fff;
+}
+.portal .p-btn-primary:hover {
+  background: #1f2937;
+}
+.portal .p-btn-approve {
+  background: #047857;
+  border-color: #047857;
+  color: #fff;
+}
+.portal .p-btn-approve:hover {
+  background: #065f46;
+}
+.portal .p-btn-danger {
+  color: var(--p-danger);
+  border-color: #fecaca;
+}
+.portal .p-btn-danger:hover {
+  background: #fef2f2;
+}
+.portal .p-btn-sm {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.portal .p-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.portal .p-input,
+.portal .p-select,
+.portal .p-textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid var(--p-line-strong);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--p-ink);
+  font: 400 14px var(--font-inter), system-ui, sans-serif;
+}
+.portal .p-textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+.portal .p-input:focus,
+.portal .p-select:focus,
+.portal .p-textarea:focus {
+  outline: 2px solid #93c5fd;
+  outline-offset: 0;
+  border-color: #3b82f6;
+}
+
+.portal .p-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.portal .p-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.portal .p-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--p-line-strong);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.portal .p-chip[data-on="true"] {
+  background: var(--p-ink);
+  border-color: var(--p-ink);
+  color: #fff;
+}
+
+.portal .p-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--p-line);
+  text-decoration: none;
+}
+.portal a.p-row:hover {
+  background: #f9fafb;
+}
+
+.portal .p-error {
+  color: var(--p-danger);
+  font-size: 13px;
+}
+
+/* Phone: room for the bottom tab bar. */
+@media (max-width: 767px) {
+  .portal .p-main {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}

@@ -38,6 +38,10 @@ services:
       # CI build time (must match the repo variable used by the workflow).
       NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
       GSD_ALLOWED_ORIGIN: ${GSD_ALLOWED_ORIGIN}
+      # Client portals (e.g. nathan.<domain>). Base domain for portal hosts, and
+      # the team app URL used for "Open in GSD" links from a portal.
+      PORTAL_BASE_DOMAIN: ${PORTAL_BASE_DOMAIN:-getshtdonehq.com}
+      GSD_PUBLIC_URL: ${GSD_PUBLIC_URL:-}
       GSD_INBOX_ADDRESS: ${GSD_INBOX_ADDRESS}
       STORAGE_DIR: /app/storage/uploads
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Manila}

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { decrypt, SESSION_COOKIE } from "@/lib/session";
+import { portalSlugFromHost } from "@/lib/portal/session";
 
 // Next.js 16: "Proxy" is the renamed Middleware. Used here only for OPTIMISTIC
 // redirects (cookie read, no DB). Real authorization is enforced in the DAL.
@@ -8,6 +9,21 @@ const PUBLIC_ROUTES = ["/login"];
 
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
+
+  // Client portals live on their own host (nathan.<domain>, or
+  // nathan.localhost in dev) and are served from /portal/<slug>/*. The portal
+  // runs its own sign-in, so none of the team redirects below apply to it.
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const slug = portalSlugFromHost(host);
+  if (slug) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/portal/${slug}${path === "/" ? "" : path}`;
+    return NextResponse.rewrite(url);
+  }
+  // On the team host the portal routes don't exist.
+  if (path === "/portal" || path.startsWith("/portal/")) {
+    return NextResponse.redirect(new URL("/", req.nextUrl));
+  }
   const isPublic = PUBLIC_ROUTES.some(
     (p) => path === p || path.startsWith(`${p}/`),
   );

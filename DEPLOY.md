@@ -238,3 +238,51 @@ docker compose down               # stop (volumes/data preserved)
   On iPhone, push only works from the Home Screen app (Share → Add to Home Screen).
 - **Time zone** — `APP_TIMEZONE` (default `Asia/Manila`) decides what "today"
   means for Home's *Due today* / *Up next*.
+
+---
+
+## Client portals (e.g. Nathan's Command Center)
+
+A client portal is a separate-looking site for one client, served by the same
+`web` container at its own address (`nathan.getshtdonehq.com`). It reads and
+writes the same tasks and documents as GSD, so nothing is entered twice.
+
+- **Who can sign in:** the client's own account (role `CLIENT`, only their own
+  portal) and any active team account. Everyone sets up two-step verification
+  (an authenticator app) on first sign-in. Client accounts are refused by the
+  team login at `gsd.…`.
+- **What the client never sees:** hours, billing, internal notes, chat, other
+  clients. Files the client marks "only me" are hidden from the team in both the
+  portal and GSD's Documents.
+- **How it maps to GSD:** client `Nathan Lord` (portal slug `nathan`); each of his
+  businesses is a project; portal statuses map onto task statuses (Needs Nathan
+  = *In review*; Waiting on = *In progress* with a name and chase date).
+
+### Turn it on
+
+1. Deploy this version the usual way (`git pull` then
+   `sudo docker compose up -d --build`). The `client_portal` migration runs
+   automatically on start.
+2. In the Pi's `.env`, add the portal host to the allowed origins and set the
+   team URL, then `sudo docker compose up -d` again:
+   ```bash
+   GSD_ALLOWED_ORIGIN=gsd.getshtdonehq.com,nathan.getshtdonehq.com
+   GSD_PUBLIC_URL=https://gsd.getshtdonehq.com
+   ```
+3. Cloudflare **Zero Trust → Networks → Tunnels →** your tunnel → **Public
+   Hostname → Add**: subdomain `nathan`, domain `getshtdonehq.com`, path empty,
+   service `HTTP` → `web:3000`. (No `/socket.io` row is needed for portals.)
+4. Load the businesses and current tasks, and create the client's login:
+   ```bash
+   sudo docker compose exec -e NATHAN_EMAIL="nathan@…" -e NATHAN_PASSWORD="a-temporary-password-12+" web npx tsx scripts/seed-nathan-portal.ts
+   ```
+   Safe to run again; it only adds what's missing.
+
+### Locked out
+
+Lost phone or forgotten password (clears two-step; they set it up again on
+next sign-in):
+```bash
+sudo docker compose exec -e RESET_EMAIL="nathan@…" -e RESET_PASSWORD="new-temporary-password" web npx tsx scripts/portal-reset.ts
+```
+After 5 wrong passwords or codes, an account is paused for 15 minutes.

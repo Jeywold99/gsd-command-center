@@ -35,7 +35,8 @@ export async function login(
     ? await verifyPassword(password, user.passwordHash)
     : false;
 
-  if (!user || !user.isActive || !passwordOk) {
+  // Client-portal accounts sign in on their own portal address, never here.
+  if (!user || !user.isActive || !passwordOk || user.role === "CLIENT") {
     return { message: "Invalid email or password." };
   }
 

@@ -2,7 +2,7 @@ import * as z from "zod";
 
 // App-level role union (mirrors the Prisma `Role` enum) — kept dependency-free
 // so it can be imported from the edge-safe proxy without pulling in Prisma.
-export type Role = "OWNER" | "MANAGER" | "STAFF";
+export type Role = "OWNER" | "MANAGER" | "STAFF" | "CLIENT";
 
 export interface SessionPayload {
   userId: string;
