@@ -11,6 +11,8 @@ import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 export const PORTAL_COOKIE = "gsd_portal";
 // Short-lived cookie between "password OK" and "code OK".
 export const PORTAL_PENDING_COOKIE = "gsd_portal_pending";
+// Holds a new authenticator secret while someone turns on two-step in Settings.
+export const PORTAL_SETUP_COOKIE = "gsd_portal_setup";
 
 export const PORTAL_SESSION_HOURS = 24 * 7;
 const PENDING_MINUTES = 10;

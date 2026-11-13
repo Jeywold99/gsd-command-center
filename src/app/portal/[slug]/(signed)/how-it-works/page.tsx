@@ -91,7 +91,7 @@ export default async function HowItWorksPage({ params }: PageProps<"/portal/[slu
               </div>
             ))}
           </div>
-          <p className="text-[13px] p-muted">Everyone signs in with their own account and two-step verification. No shared logins.</p>
+          <p className="text-[13px] p-muted">Everyone signs in with their own account; no shared logins. Two-step verification is optional and can be turned on in Settings.</p>
         </div>
         <div className="flex flex-col gap-3">
           <h2 className="p-h2">Vault rules</h2>

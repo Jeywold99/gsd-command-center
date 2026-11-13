@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
 import { getProject } from "@/lib/projects";
+import { portalUrl } from "@/lib/portal/url";
+import CommandCenterLink from "@/app/(app)/_components/command-center-link";
+
 import { ProjectStatusBadge, fmtDate } from "../_components/task-badges";
 import KanbanBoard from "../_components/kanban-board";
 import Timeline from "../_components/timeline";
@@ -71,6 +74,10 @@ export default async function ProjectDetailPage({
             )}
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+          {project.portalShort && project.client?.portalSlug && (
+            <CommandCenterLink href={portalUrl(project.client.portalSlug, `/b/${project.id}`)} label="Open in Command Center" />
+          )}
           <Link
             href={`/projects/${project.id}/edit`}
             className="inline-flex items-center gap-1.5 border border-black/10 text-ink/70 hover:text-ink hover:bg-cream text-sm font-semibold px-3.5 py-2 rounded-full transition"
@@ -78,6 +85,7 @@ export default async function ProjectDetailPage({
             <Pencil className="w-4 h-4" />
             Edit
           </Link>
+          </div>
         </div>
       </div>
 

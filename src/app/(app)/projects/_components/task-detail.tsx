@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Trash2, Bell, Repeat, Mic } from "lucide-react";
 import { getTask, listUsers } from "@/lib/projects";
+import { portalUrl } from "@/lib/portal/url";
+import CommandCenterLink from "@/app/(app)/_components/command-center-link";
+
 import { updateTask, deleteTask, createReminder, deleteReminder } from "../actions";
 import { COLUMNS } from "./task-badges";
 import AssigneePicker from "./assignee-picker";
@@ -49,6 +52,10 @@ export default async function TaskDetail({
           <ChevronLeft className="w-5 h-5" strokeWidth={2.2} />
           {backLabel}
         </Link>
+        <div className="flex flex-wrap items-center gap-2">
+        {task.project?.portalShort && task.project.client?.portalSlug && (
+          <CommandCenterLink href={portalUrl(task.project.client.portalSlug, `/t/${task.id}`)} label="Open in Command Center" />
+        )}
         {task.voiceNoteId && (
           <Link
             href={`/voice/${task.voiceNoteId}`}
@@ -58,6 +65,7 @@ export default async function TaskDetail({
             From a voice note
           </Link>
         )}
+        </div>
       </div>
 
       {/* The task-edit form is DOM-empty here; its fields live in both columns

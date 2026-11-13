@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pencil, ExternalLink, Plus } from "lucide-react";
 import { getClientById } from "@/lib/crm";
+import { portalUrl } from "@/lib/portal/url";
+import CommandCenterLink from "@/app/(app)/_components/command-center-link";
+
 import { computeClientHealthMap } from "@/lib/health";
 import { StatusBadge, HealthDot, StageLabel, fmtDate } from "../_components/badges";
 import BillingRateForm from "../_components/rate-form";
@@ -99,6 +102,8 @@ export default async function ClientDetailPage({
             </div>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2">
+          {client.portalSlug && <CommandCenterLink href={portalUrl(client.portalSlug)} />}
           <Link
             href={`/crm/${client.id}/edit`}
             className="inline-flex items-center gap-1.5 border border-black/10 text-ink/70 hover:text-ink hover:bg-cream text-sm font-semibold px-3.5 py-2 rounded-full transition"
@@ -106,6 +111,7 @@ export default async function ClientDetailPage({
             <Pencil className="w-4 h-4" />
             Edit
           </Link>
+          </div>
         </div>
 
         {/* Status / pipeline controls */}

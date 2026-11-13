@@ -19,9 +19,6 @@ export function CredentialsForm() {
       <button className="p-btn p-btn-primary w-full" disabled={pending}>
         {pending ? "Checking…" : "Continue"}
       </button>
-      <p className="p-faint text-[13px]">
-        Two-step verification is required. You&apos;ll enter a code from your phone next.
-      </p>
     </form>
   );
 }

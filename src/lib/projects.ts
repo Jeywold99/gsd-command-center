@@ -108,7 +108,7 @@ export async function listProjectsForClient(clientId: string | null) {
 export async function getClientLite(id: string) {
   const client = await prisma.client.findUnique({
     where: { id },
-    select: { id: true, companyName: true, colorHex: true, status: true, timezone: true },
+    select: { id: true, companyName: true, colorHex: true, status: true, timezone: true, portalSlug: true },
   });
   if (!client || client.status === "CHURNED") return null;
   return client;
@@ -119,7 +119,7 @@ export async function getProject(id: string) {
   return prisma.project.findUnique({
     where: { id },
     include: {
-      client: { select: { id: true, companyName: true, colorHex: true } },
+      client: { select: { id: true, companyName: true, colorHex: true, portalSlug: true } },
       milestones: { orderBy: { order: "asc" } },
       tasks: {
         where: { parentId: null, isArchived: false },
@@ -141,6 +141,8 @@ export async function getTask(id: string) {
         select: {
           id: true,
           name: true,
+          portalShort: true,
+          client: { select: { portalSlug: true } },
           milestones: { orderBy: { order: "asc" }, select: { id: true, name: true } },
         },
       },

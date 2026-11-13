@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Plus, FolderKanban, Building2, ExternalLink } from "lucide-react";
 import { listProjectsForClient, getClientLite } from "@/lib/projects";
+import { portalUrl } from "@/lib/portal/url";
+import CommandCenterLink from "@/app/(app)/_components/command-center-link";
+
 import ProjectCard from "../../_components/project-card";
 import ClientClock from "../../../crm/_components/client-clock";
 
@@ -62,6 +65,8 @@ export default async function ClientProjectsPage({
           </div>
 
           {client && (
+            <div className="flex flex-wrap items-center gap-2">
+            {client.portalSlug && <CommandCenterLink href={portalUrl(client.portalSlug)} />}
             <Link
               href={`/crm/${client.id}`}
               className="inline-flex items-center gap-1.5 border border-black/10 text-ink/70 hover:text-ink hover:bg-cream text-sm font-semibold px-3.5 py-2 rounded-full transition"
@@ -69,6 +74,7 @@ export default async function ClientProjectsPage({
               View in CRM
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
+            </div>
           )}
         </div>
       </div>

@@ -33,6 +33,9 @@ export default async function SignedLayout({ children, params }: LayoutProps<"/p
               </summary>
               <div className="absolute right-0 mt-2 w-56 p-card p-2 shadow-lg z-30 flex flex-col">
                 <span className="px-3 py-2 text-[13px] p-muted break-all">{ctx.user.email}</span>
+                <Link href="/settings" className="px-3 py-2 rounded-lg hover:bg-[var(--p-bg)] no-underline">
+                  Settings
+                </Link>
                 <Link href="/trash" className="px-3 py-2 rounded-lg hover:bg-[var(--p-bg)] no-underline">
                   Deleted tasks
                 </Link>

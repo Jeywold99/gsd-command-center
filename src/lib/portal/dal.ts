@@ -12,7 +12,8 @@ import {
 // The portal's secure access check (the proxy only routes by host).
 //   - The client's own account (role CLIENT) may open only its own client's portal.
 //   - Team accounts (OWNER / MANAGER / STAFF) may open any portal, with edit tools.
-// A session is only ever issued after the two-step code checks out.
+// Sessions are issued after the password (and the two-step code, for people
+// who turned it on in Settings) checks out.
 
 export type PortalUser = { id: string; name: string; email: string; role: string };
 export type PortalContext = {
@@ -39,9 +40,9 @@ async function resolve(slug: string): Promise<PortalContext | null> {
 
   const user = await prisma.user.findUnique({
     where: { id: session.pu },
-    select: { id: true, name: true, email: true, role: true, isActive: true, clientId: true, totpEnabledAt: true },
+    select: { id: true, name: true, email: true, role: true, isActive: true, clientId: true },
   });
-  if (!user || !user.isActive || !user.totpEnabledAt) return null;
+  if (!user || !user.isActive) return null;
   const isTeam = user.role !== "CLIENT";
   if (!isTeam && user.clientId !== client.id) return null;
 

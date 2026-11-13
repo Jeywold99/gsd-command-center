@@ -8,7 +8,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 //
 //   npx tsx scripts/seed-nathan-portal.ts
 //
-// To also create Nathan's own login (he sets up two-step on first sign-in):
+// To also create Nathan's own login (he can change the password and turn on
+// two-step verification under Settings):
 //   NATHAN_EMAIL="nathan@example.com" NATHAN_PASSWORD="a-long-temporary-password" \
 //     npx tsx scripts/seed-nathan-portal.ts
 //
@@ -263,7 +264,7 @@ async function main() {
       await prisma.user.create({
         data: { email, name: "Nathan Lord", role: "CLIENT", clientId: client.id, passwordHash: await bcrypt.hash(password, 12) },
       });
-      console.log(`Created Nathan's login: ${email}. He sets up two-step verification on first sign-in.`);
+      console.log(`Created Nathan's login: ${email}. He can change the password under Settings.`);
     }
   } else {
     console.log("No NATHAN_EMAIL / NATHAN_PASSWORD given; Nathan's login not created.");

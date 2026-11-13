@@ -4,7 +4,7 @@ import { PrismaClient } from "../src/generated/prisma/client/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 // Help someone who is locked out of a client portal:
-//   - lost phone → clears their two-step setup (they scan a new QR next sign-in)
+//   - lost phone → turns their two-step verification off (they can turn it on again in Settings)
 //   - forgot password → also sets a new temporary password
 //
 //   RESET_EMAIL="nathan@example.com" npx tsx scripts/portal-reset.ts

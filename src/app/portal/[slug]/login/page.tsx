@@ -1,7 +1,5 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import QRCode from "qrcode";
-import { prisma } from "@/lib/prisma";
 import { getPortalClient } from "@/lib/portal/dal";
 import { listBusinesses } from "@/lib/portal/data";
 import {
@@ -10,7 +8,6 @@ import {
   readPortalPending,
   readPortalSession,
 } from "@/lib/portal/session";
-import { totpUri } from "@/lib/totp";
 import { CredentialsForm, CodeForm } from "./forms";
 import { portalCancelSignIn } from "./actions";
 
@@ -25,16 +22,6 @@ export default async function PortalLoginPage({ params }: PageProps<"/portal/[sl
   const pending = await readPortalPending(jar.get(PORTAL_PENDING_COOKIE)?.value);
   const step = pending && pending.slug === slug ? pending : null;
   const businesses = await listBusinesses(client.id);
-
-  let enroll: { qr: string; key: string } | null = null;
-  if (step?.stage === "enroll" && step.sec) {
-    const user = await prisma.user.findUnique({ where: { id: step.pu }, select: { email: true } });
-    const uri = totpUri(step.sec, user?.email ?? "account", `${client.companyName} Command Center`);
-    enroll = {
-      qr: await QRCode.toDataURL(uri, { margin: 1, width: 220 }),
-      key: step.sec.replace(/(.{4})/g, "$1 ").trim(),
-    };
-  }
 
   return (
     <main className="min-h-screen grid md:grid-cols-2">
@@ -79,25 +66,6 @@ export default async function PortalLoginPage({ params }: PageProps<"/portal/[sl
                   <p className="p-muted mt-1">Open your authenticator app and enter the 6-digit code for this Command Center.</p>
                 </div>
                 <CodeForm label="Code" />
-              </>
-            )}
-
-            {step?.stage === "enroll" && enroll && (
-              <>
-                <div>
-                  <h2 className="text-xl font-bold">Set up two-step verification</h2>
-                  <p className="p-muted mt-1">
-                    One time only. Scan this with an authenticator app on your phone (Google Authenticator, Microsoft
-                    Authenticator, 1Password or Bitwarden), then enter the 6-digit code it shows.
-                  </p>
-                </div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={enroll.qr} alt="QR code for your authenticator app" width={220} height={220} className="self-center rounded-lg border border-[var(--p-line)]" />
-                <details className="text-[13px]">
-                  <summary className="cursor-pointer p-muted">Can&apos;t scan? Enter this key instead</summary>
-                  <code className="block mt-2 p-3 rounded-lg bg-[var(--p-bg)] font-mono text-[13px] break-all select-all">{enroll.key}</code>
-                </details>
-                <CodeForm label="Code from the app" />
               </>
             )}
 

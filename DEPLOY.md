@@ -248,12 +248,12 @@ A client portal is a separate-looking site for one client, served by the same
 writes the same tasks and documents as GSD, so nothing is entered twice.
 
 - **Who can sign in:** the client's own account (role `CLIENT`, only their own
-  portal) and any active team account. Everyone sets up two-step verification
-  (an authenticator app) on first sign-in. Client accounts are refused by the
-  team login at `gsd.…`.
+  portal) and any active team account. Each person can change their password and
+  turn on optional two-step verification (an authenticator app) under
+  **Settings** in the avatar menu. Client accounts are refused by the team login
+  at `gsd.…`.
 - **What the client never sees:** hours, billing, internal notes, chat, other
-  clients. Files the client marks "only me" are hidden from the team in both the
-  portal and GSD's Documents.
+  clients. Every file in the portal's Vault is open to the client and the team.
 - **How it maps to GSD:** client `Nathan Lord` (portal slug `nathan`); each of his
   businesses is a project; portal statuses map onto task statuses (Needs Nathan
   = *In review*; Waiting on = *In progress* with a name and chase date).
@@ -280,8 +280,8 @@ writes the same tasks and documents as GSD, so nothing is entered twice.
 
 ### Locked out
 
-Lost phone or forgotten password (clears two-step; they set it up again on
-next sign-in):
+Lost phone or forgotten password (turns two-step off; they can turn it on
+again in Settings):
 ```bash
 sudo docker compose exec -e RESET_EMAIL="nathan@…" -e RESET_PASSWORD="new-temporary-password" web npx tsx scripts/portal-reset.ts
 ```
